@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Editar Catálogo · Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body class="admin">
+  <!-- Login real con Firebase Auth -->
+  <div id="login" class="login-screen">
+    <form id="login-form" class="login-card">
+      <h1>🔒 Editar Catálogo</h1>
+      <p>Inicia sesión con tu cuenta autorizada.</p>
+      <input id="login-email" type="email" placeholder="Correo" autocomplete="username" />
+      <input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" />
+      <button type="submit">Entrar</button>
+      <p id="login-error" class="login-error" hidden></p>
+    </form>
+  </div>
+
+  <!-- Panel admin -->
+  <div id="app" hidden>
+    <header class="admin-header">
+      <div class="admin-header-inner">
+        <div>
+          <h1>Editar Catálogo</h1>
+          <p id="status" class="admin-status"></p>
+        </div>
+        <div class="admin-actions">
+          <button id="btn-add" class="btn btn-ghost">+ Agregar producto</button>
+          <button id="btn-save" class="btn btn-primary">Guardar cambios</button>
+          <a href="index.html" class="btn btn-ghost" target="_blank" rel="noopener">Ver catálogo ↗</a>
+        </div>
+      </div>
+      <div class="admin-subbar">
+        <input id="admin-search" type="search" placeholder="Buscar producto a editar…" />
+        <span id="admin-count" class="admin-count"></span>
+        <button id="btn-logout" class="btn-link">Salir</button>
+      </div>
+    </header>
+
+    <main id="editor" class="editor"></main>
+
+    <div id="toast" class="toast" hidden></div>
+  </div>
+
+  <!-- Plantilla de tarjeta editable -->
+  <template id="row-tpl">
+    <article class="edit-card">
+      <div class="edit-head">
+        <img class="edit-thumb" alt="" loading="lazy" decoding="async" />
+        <div class="edit-head-main">
+          <input class="f-nombre input-title" placeholder="Nombre del producto" />
+          <div class="edit-head-row">
+            <input class="f-sku" placeholder="SKU" />
+            <input class="f-marca" placeholder="Marca" />
+          </div>
+        </div>
+        <button class="btn-del" title="Eliminar producto">🗑</button>
+      </div>
+
+      <!-- Precios por volumen -->
+      <div class="price-box">
+        <div class="price-base">
+          <label class="field">
+            <span>Precio base (1 unidad)</span>
+            <input class="f-precioBase" type="number" min="0" step="any" placeholder="ej. 45000" />
+          </label>
+        </div>
+        <div class="escalas-editor">
+          <div class="escalas-head">
+            <span>Escalas por cantidad</span>
+            <button type="button" class="btn-escala-add">+ Agregar escala</button>
+          </div>
+          <div class="escalas-rows"></div>
+          <p class="escalas-hint">Ej.: desde <b>10</b> → 41000 · desde <b>50</b> → 38000. El cotizador aplica la escala más alta que alcance la cantidad.</p>
+        </div>
+      </div>
+
+      <div class="edit-grid">
+        <label class="field">
+          <span>Imagen (URL)</span>
+          <input class="f-imagen" placeholder="https://…" />
+        </label>
+        <label class="field">
+          <span>Categoría</span>
+          <input class="f-categoria" list="cat-list" placeholder="Categoría" />
+        </label>
+        <label class="field field-full">
+          <span>Presentación</span>
+          <input class="f-presentacion" placeholder="ej. 180 cápsulas · 1000 mg" />
+        </label>
+        <label class="field field-full">
+          <span>Descripción</span>
+          <textarea class="f-descripcion" rows="3" placeholder="Descripción del producto…"></textarea>
+        </label>
+        <label class="field field-full">
+          <span>Beneficios <em>(uno por línea)</em></span>
+          <textarea class="f-beneficios" rows="3" placeholder="Antiinflamatorio&#10;Antioxidante&#10;Apoyo articular"></textarea>
+        </label>
+        <label class="field field-full">
+          <span>Ingredientes <em>(uno por línea)</em></span>
+          <textarea class="f-ingredientes" rows="3" placeholder="Cúrcuma 1000 mg&#10;Pimienta negra"></textarea>
+        </label>
+        <label class="field">
+          <span>Dosis</span>
+          <input class="f-dosis" placeholder="ej. 1 cápsula al día con comida" />
+        </label>
+        <label class="field">
+          <span>Modo de uso</span>
+          <textarea class="f-modoUso" rows="2" placeholder="Instrucciones de uso…"></textarea>
+        </label>
+        <label class="field field-full">
+          <span>Advertencias</span>
+          <textarea class="f-advertencias" rows="2" placeholder="Advertencias / contraindicaciones…"></textarea>
+        </label>
+      </div>
+    </article>
+  </template>
+
+  <!-- Plantilla de fila de escala -->
+  <template id="escala-tpl">
+    <div class="escala-row">
+      <label>Desde <input class="e-desde" type="number" min="2" step="1" placeholder="10" /> uds</label>
+      <label>Precio <input class="e-precio" type="number" min="0" step="any" placeholder="41000" /></label>
+      <button type="button" class="escala-del" title="Quitar escala">✕</button>
+    </div>
+  </template>
+
+  <datalist id="cat-list"></datalist>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

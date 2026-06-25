@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catálogo de Productos</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- jsPDF (UMD) para descargar la cotización en PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <h1>Catálogo de Productos</h1>
+      <p class="subtitle">Suplementos · Salud · Belleza · Bebés · Alimentos</p>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="toolbar-inner">
+      <div class="search-box">
+        <input
+          id="search"
+          type="search"
+          placeholder="Buscar por nombre, SKU o marca…"
+          autocomplete="off"
+        />
+      </div>
+      <div id="cat-filters" class="cat-filters"></div>
+    </div>
+  </div>
+
+  <main class="container">
+    <p id="count" class="count"></p>
+    <section id="grid" class="grid" aria-live="polite"></section>
+    <p id="empty" class="empty" hidden>No hay productos que coincidan con tu búsqueda.</p>
+  </main>
+
+  <!-- Modal de detalle -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="m-name">
+      <button class="modal-close" data-close aria-label="Cerrar">&times;</button>
+      <div class="modal-body">
+        <div class="modal-media">
+          <img id="m-img" alt="" loading="lazy" />
+        </div>
+        <div class="modal-info">
+          <div class="badges">
+            <span id="m-cat" class="badge"></span>
+            <span id="m-brand" class="badge badge-soft"></span>
+          </div>
+          <h2 id="m-name"></h2>
+          <p id="m-sku" class="sku"></p>
+
+          <!-- Cotizador: precio por volumen + agregar -->
+          <div id="m-cotizar" class="cotizar-box">
+            <p id="m-precio" class="precio"></p>
+            <div id="m-escalas-wrap" class="escalas">
+              <h4>Precio por cantidad</h4>
+              <table id="m-escalas"></table>
+            </div>
+            <div class="cotizar-add">
+              <div class="qty-stepper">
+                <button type="button" data-qty="-1" aria-label="Quitar">−</button>
+                <input id="m-qty" type="number" min="1" value="1" inputmode="numeric" />
+                <button type="button" data-qty="1" aria-label="Agregar">+</button>
+              </div>
+              <button id="m-add" class="btn-add">Agregar a cotización</button>
+            </div>
+            <p id="m-line-total" class="line-total"></p>
+          </div>
+
+          <div id="m-pres-wrap" class="block">
+            <h3>Presentación</h3>
+            <p id="m-pres"></p>
+          </div>
+
+          <div id="m-desc-wrap" class="block">
+            <h3>Descripción</h3>
+            <p id="m-desc"></p>
+          </div>
+
+          <div id="m-benef-wrap" class="block">
+            <h3>Beneficios</h3>
+            <ul id="m-benef"></ul>
+          </div>
+
+          <div id="m-ingr-wrap" class="block">
+            <h3>Ingredientes</h3>
+            <ul id="m-ingr"></ul>
+          </div>
+
+          <div id="m-dosis-wrap" class="block">
+            <h3>Dosis</h3>
+            <p id="m-dosis"></p>
+          </div>
+
+          <div id="m-modo-wrap" class="block">
+            <h3>Modo de uso</h3>
+            <p id="m-modo"></p>
+          </div>
+
+          <div id="m-adv-wrap" class="block">
+            <h3>Advertencias</h3>
+            <p id="m-adv"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botón flotante: abrir cotización -->
+  <button id="cart-fab" class="cart-fab" hidden>
+    🧾 Cotización <span id="cart-count" class="cart-count">0</span>
+  </button>
+
+  <!-- Panel lateral: cotización -->
+  <aside id="cart" class="cart-drawer" hidden aria-label="Cotización">
+    <div class="cart-backdrop" data-cart-close></div>
+    <div class="cart-panel">
+      <div class="cart-head">
+        <h2>Tu cotización</h2>
+        <button class="cart-x" data-cart-close aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="cart-customer">
+        <input id="cart-nombre" type="text" placeholder="Nombre del cliente (opcional)" autocomplete="name" />
+      </div>
+      <div id="cart-items" class="cart-items"></div>
+      <p id="cart-empty" class="cart-empty">Aún no agregas productos. Abre un producto y pulsa “Agregar a cotización”.</p>
+      <div class="cart-foot">
+        <div class="cart-total-row">
+          <span>Total estimado</span>
+          <strong id="cart-total">$0</strong>
+        </div>
+        <p class="cart-note">Los precios varían según la cantidad. Cotización referencial, no es factura.</p>
+        <div class="cart-foot-actions">
+          <button id="cart-clear" class="btn-clear">Vaciar</button>
+          <button id="cart-pdf" class="btn-pdf">Descargar PDF</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <footer class="site-footer">
+    <p>Catálogo · <span id="footer-count"></span> productos</p>
+    <p><a href="admin.html" class="admin-link">Editar catálogo</a></p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

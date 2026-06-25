@@ -1,0 +1,5 @@
+# Dependencias del build del PDF (se instalan con: cd _build && npm install)
+_build/node_modules/
+
+# Semilla intermedia generada por export_catalogo_externo.ts
+productos-base.json
