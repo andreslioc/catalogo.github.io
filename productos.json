@@ -20,7 +20,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$63.183",
+    "precioBase": 63183,
+    "escalasUnidades": [],
+    "costoLlegada": 48602,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "Salpip-412",
@@ -42,7 +46,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$38.375",
+    "precioBase": 38375,
+    "escalasUnidades": [],
+    "costoLlegada": 29519,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "Salpip-410",
@@ -64,7 +72,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$61.118",
+    "precioBase": 61118,
+    "escalasUnidades": [],
+    "costoLlegada": 47014,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "Salnow-442",
@@ -86,7 +98,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$54.504",
+    "precioBase": 54504,
+    "escalasUnidades": [],
+    "costoLlegada": 41926,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "Salnow-405",
@@ -107,7 +123,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$47.194",
+    "precioBase": 47194,
+    "escalasUnidades": [],
+    "costoLlegada": 36303,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalWho-001",
@@ -129,7 +149,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$144.414",
+    "precioBase": 144414,
+    "escalasUnidades": [],
+    "costoLlegada": 111088,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalVit-208",
@@ -153,7 +177,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$76.122",
+    "precioBase": 76122,
+    "escalasUnidades": [],
+    "costoLlegada": 58555,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalSpr-389",
@@ -174,7 +202,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$56.479",
+    "precioBase": 56479,
+    "escalasUnidades": [],
+    "costoLlegada": 43445,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalSpr-199",
@@ -195,7 +227,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$33.030",
+    "precioBase": 33030,
+    "escalasUnidades": [],
+    "costoLlegada": 25408,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalPip-323",
@@ -217,7 +253,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$61.500",
+    "precioBase": 61500,
+    "escalasUnidades": [],
+    "costoLlegada": 47308,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalPip-268",
@@ -238,7 +278,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$57.126",
+    "precioBase": 57126,
+    "escalasUnidades": [],
+    "costoLlegada": 43943,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalNow-329",
@@ -259,7 +303,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$31.721",
+    "precioBase": 31721,
+    "escalasUnidades": [],
+    "costoLlegada": 24401,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalNow-123",
@@ -281,7 +329,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$49.057",
+    "precioBase": 49057,
+    "escalasUnidades": [],
+    "costoLlegada": 37736,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalNew-302",
@@ -303,7 +355,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$68.877",
+    "precioBase": 68877,
+    "escalasUnidades": [],
+    "costoLlegada": 52982,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalNeo-321",
@@ -325,7 +381,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$188.505",
+    "precioBase": 188505,
+    "escalasUnidades": [],
+    "costoLlegada": 145004,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalNat-441",
@@ -347,7 +407,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$49.843",
+    "precioBase": 49843,
+    "escalasUnidades": [],
+    "costoLlegada": 38341,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalNat-436",
@@ -369,7 +433,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$132.869",
+    "precioBase": 132869,
+    "escalasUnidades": [],
+    "costoLlegada": 102207,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalNat-207",
@@ -391,7 +459,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$65.978",
+    "precioBase": 65978,
+    "escalasUnidades": [],
+    "costoLlegada": 50752,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalNOW-333",
@@ -413,7 +485,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$71.291",
+    "precioBase": 71291,
+    "escalasUnidades": [],
+    "costoLlegada": 54839,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalLac-001",
@@ -434,7 +510,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$84.921",
+    "precioBase": 84921,
+    "escalasUnidades": [],
+    "costoLlegada": 65324,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalEqu-385",
@@ -455,7 +535,11 @@
     ],
     "modoUso": "",
     "advertencias": "Medicamento de venta libre. Lee la etiqueta y sigue las indicaciones. No excedas la dosis. Consulta a un profesional de la salud si los síntomas persisten. Mantener fuera del alcance de los niños. No combinar con otros productos que contengan acetaminofén ni con alcohol.",
-    "precio": ""
+    "precio": "$34.728",
+    "costoLlegada": 26714,
+    "margenSugeridoPct": 30,
+    "precioBase": 34728,
+    "escalasUnidades": []
   },
   {
     "sku": "SalKir-84",
@@ -476,7 +560,11 @@
     ],
     "modoUso": "",
     "advertencias": "Medicamento de venta libre. Lee la etiqueta y sigue las indicaciones. No excedas la dosis. Consulta a un profesional de la salud si los síntomas persisten. Mantener fuera del alcance de los niños. No usar con alcohol. Puede causar somnolencia: no conducir tras tomarlo.",
-    "precio": ""
+    "precio": "$52.940",
+    "costoLlegada": 40723,
+    "margenSugeridoPct": 30,
+    "precioBase": 52940,
+    "escalasUnidades": []
   },
   {
     "sku": "SalKir-367",
@@ -497,7 +585,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$59.280",
+    "precioBase": 59280,
+    "escalasUnidades": [],
+    "costoLlegada": 45600,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalKir-366",
@@ -519,7 +611,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$97.088",
+    "precioBase": 97088,
+    "escalasUnidades": [],
+    "costoLlegada": 74683,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalNOW-319",
@@ -543,7 +639,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$126.122",
+    "precioBase": 126122,
+    "escalasUnidades": [],
+    "costoLlegada": 97017,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalKir-125",
@@ -564,7 +664,11 @@
     ],
     "modoUso": "",
     "advertencias": "Medicamento de venta libre. Lee la etiqueta y sigue las indicaciones. No excedas la dosis. Consulta a un profesional de la salud si los síntomas persisten. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$75.812",
+    "precioBase": 75812,
+    "escalasUnidades": [],
+    "costoLlegada": 58317,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalHor-405",
@@ -585,7 +689,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$84.726",
+    "precioBase": 84726,
+    "escalasUnidades": [],
+    "costoLlegada": 65174,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalHor-396",
@@ -607,7 +715,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$62.811",
+    "precioBase": 62811,
+    "escalasUnidades": [],
+    "costoLlegada": 48316,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalHor-337",
@@ -631,7 +743,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$57.275",
+    "precioBase": 57275,
+    "escalasUnidades": [],
+    "costoLlegada": 44058,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "Salhor-403",
@@ -653,7 +769,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$60.418",
+    "precioBase": 60418,
+    "escalasUnidades": [],
+    "costoLlegada": 46475,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalHor-332",
@@ -674,7 +794,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$58.822",
+    "precioBase": 58822,
+    "escalasUnidades": [],
+    "costoLlegada": 45248,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalHor-298",
@@ -695,7 +819,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$100.802",
+    "precioBase": 100802,
+    "escalasUnidades": [],
+    "costoLlegada": 77540,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalHor-330",
@@ -718,7 +846,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$59.306",
+    "precioBase": 59306,
+    "escalasUnidades": [],
+    "costoLlegada": 45620,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalHor-328",
@@ -739,7 +871,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$79.720",
+    "precioBase": 79720,
+    "escalasUnidades": [],
+    "costoLlegada": 61323,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalHor-300",
@@ -762,7 +898,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$64.258",
+    "precioBase": 64258,
+    "escalasUnidades": [],
+    "costoLlegada": 49429,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalHor-294",
@@ -784,7 +924,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$58.179",
+    "precioBase": 58179,
+    "escalasUnidades": [],
+    "costoLlegada": 44753,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalHor-200",
@@ -806,7 +950,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$104.637",
+    "precioBase": 104637,
+    "escalasUnidades": [],
+    "costoLlegada": 80490,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalDoc-398",
@@ -830,7 +978,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$59.437",
+    "precioBase": 59437,
+    "escalasUnidades": [],
+    "costoLlegada": 45721,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalDoc-397",
@@ -853,7 +1005,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$62.609",
+    "precioBase": 62609,
+    "escalasUnidades": [],
+    "costoLlegada": 48161,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalDea-195",
@@ -875,7 +1031,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$117.741",
+    "precioBase": 117741,
+    "escalasUnidades": [],
+    "costoLlegada": 90570,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalCom-188",
@@ -897,7 +1057,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$96.676",
+    "precioBase": 96676,
+    "escalasUnidades": [],
+    "costoLlegada": 74366,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalCen-371",
@@ -920,7 +1084,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$68.713",
+    "precioBase": 68713,
+    "escalasUnidades": [],
+    "costoLlegada": 52856,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalCen-370",
@@ -943,7 +1111,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$77.159",
+    "precioBase": 77159,
+    "escalasUnidades": [],
+    "costoLlegada": 59353,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalCen-369",
@@ -966,7 +1138,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$96.090",
+    "precioBase": 96090,
+    "escalasUnidades": [],
+    "costoLlegada": 73915,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalCar-365",
@@ -988,7 +1164,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$99.628",
+    "precioBase": 99628,
+    "escalasUnidades": [],
+    "costoLlegada": 76637,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalCar-363",
@@ -1011,7 +1191,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$105.175",
+    "precioBase": 105175,
+    "escalasUnidades": [],
+    "costoLlegada": 80904,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalCar-362",
@@ -1032,7 +1216,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$56.311",
+    "precioBase": 56311,
+    "escalasUnidades": [],
+    "costoLlegada": 43316,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalKir-282",
@@ -1053,7 +1241,11 @@
     ],
     "modoUso": "",
     "advertencias": "Medicamento de venta libre. Lee la etiqueta y sigue las indicaciones. No excedas la dosis. Consulta a un profesional de la salud si los síntomas persisten. Mantener fuera del alcance de los niños. El uso prolongado de aspirina debe ser indicado por tu médico.",
-    "precio": ""
+    "precio": "$41.561",
+    "costoLlegada": 31970,
+    "margenSugeridoPct": 30,
+    "precioBase": 41561,
+    "escalasUnidades": []
   },
   {
     "sku": "SalCar-335",
@@ -1075,7 +1267,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$55.579",
+    "precioBase": 55579,
+    "escalasUnidades": [],
+    "costoLlegada": 42753,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalCar-361",
@@ -1099,7 +1295,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$61.832",
+    "precioBase": 61832,
+    "escalasUnidades": [],
+    "costoLlegada": 47563,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalCar-360",
@@ -1122,7 +1322,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$55.063",
+    "precioBase": 55063,
+    "escalasUnidades": [],
+    "costoLlegada": 42356,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalKir-283",
@@ -1144,7 +1348,11 @@
     ],
     "modoUso": "",
     "advertencias": "Medicamento de venta libre. Lee la etiqueta y sigue las indicaciones. No excedas la dosis. Consulta a un profesional de la salud si los síntomas persisten. Mantener fuera del alcance de los niños. No combinar con otros productos con acetaminofén ni con alcohol.",
-    "precio": ""
+    "precio": "$50.499",
+    "costoLlegada": 38845,
+    "margenSugeridoPct": 30,
+    "precioBase": 50499,
+    "escalasUnidades": []
   },
   {
     "sku": "SalCar-334",
@@ -1167,7 +1375,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$56.455",
+    "precioBase": 56455,
+    "escalasUnidades": [],
+    "costoLlegada": 43427,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalCar-327",
@@ -1190,7 +1402,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$61.101",
+    "precioBase": 61101,
+    "escalasUnidades": [],
+    "costoLlegada": 47001,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalCar-299",
@@ -1211,7 +1427,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$57.204",
+    "precioBase": 57204,
+    "escalasUnidades": [],
+    "costoLlegada": 44003,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalBen-265",
@@ -1234,7 +1454,11 @@
     ],
     "modoUso": "Aplica una capa fina sobre la zona adolorida hasta 3-4 veces al día. Lava tus manos después.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Haz una prueba en una zona pequeña antes del primer uso y suspende si aparece irritación. Mantener fuera del alcance de los niños. No aplicar sobre heridas ni usar con vendajes apretados o calor.",
-    "precio": ""
+    "precio": "$74.155",
+    "precioBase": 74155,
+    "escalasUnidades": [],
+    "costoLlegada": 57042,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelPip-297",
@@ -1255,7 +1479,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$56.776",
+    "precioBase": 56776,
+    "escalasUnidades": [],
+    "costoLlegada": 43674,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalNat-439",
@@ -1277,7 +1505,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$39.329",
+    "costoLlegada": 30253,
+    "margenSugeridoPct": 30,
+    "precioBase": 39329,
+    "escalasUnidades": []
   },
   {
     "sku": "Belnat-408",
@@ -1300,7 +1532,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$61.420",
+    "precioBase": 61420,
+    "escalasUnidades": [],
+    "costoLlegada": 47246,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "Salpip-411",
@@ -1322,7 +1558,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$49.457",
+    "precioBase": 49457,
+    "escalasUnidades": [],
+    "costoLlegada": 38044,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalHor-404",
@@ -1344,7 +1584,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$61.779",
+    "precioBase": 61779,
+    "escalasUnidades": [],
+    "costoLlegada": 47522,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "AliCel-281",
@@ -1369,7 +1613,11 @@
     ],
     "modoUso": "Consumir frío. Ideal antes de la actividad física.",
     "advertencias": "Consúmase como parte de una dieta equilibrada. Contiene cafeína: no recomendado para menores, embarazadas ni personas sensibles a la cafeína.",
-    "precio": ""
+    "precio": "$67.869",
+    "precioBase": 67869,
+    "escalasUnidades": [],
+    "costoLlegada": 52207,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "Salpip-416",
@@ -1391,7 +1639,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$39.200",
+    "precioBase": 39200,
+    "escalasUnidades": [],
+    "costoLlegada": 30154,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalPip-345",
@@ -1414,7 +1666,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$25.461",
+    "precioBase": 25461,
+    "escalasUnidades": [],
+    "costoLlegada": 19585,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "SalPip-316",
@@ -1436,7 +1692,11 @@
     ],
     "modoUso": "",
     "advertencias": "Suplemento dietario. No reemplaza una alimentación variada y equilibrada. Consulta a tu médico antes de usar si estás embarazada, en lactancia, tomas medicamentos o tienes alguna condición médica. No excedas la dosis sugerida. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$55.589",
+    "precioBase": 55589,
+    "escalasUnidades": [],
+    "costoLlegada": 42761,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "AliCel-280",
@@ -1461,7 +1721,11 @@
     ],
     "modoUso": "Disolver una porción en agua fría. Ideal antes del ejercicio.",
     "advertencias": "Consúmase como parte de una dieta equilibrada. Contiene cafeína: no recomendado para menores, embarazadas ni personas sensibles a la cafeína.",
-    "precio": ""
+    "precio": "",
+    "costoLlegada": 0,
+    "margenSugeridoPct": 30,
+    "precioBase": 0,
+    "escalasUnidades": []
   },
   {
     "sku": "Bebdes-407",
@@ -1483,7 +1747,11 @@
     ],
     "modoUso": "Aplica una capa generosa en cada cambio de pañal, sobre la piel limpia y seca.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Suspende si aparece irritación y consulta al pediatra. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$42.901",
+    "precioBase": 42901,
+    "escalasUnidades": [],
+    "costoLlegada": 33001,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelOrd-58",
@@ -1505,7 +1773,11 @@
     ],
     "modoUso": "Aplica por la noche con algodón sobre rostro limpio. No enjuagar. Usa protector solar de día.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Haz una prueba en una zona pequeña antes del primer uso y suspende si aparece irritación. Mantener fuera del alcance de los niños. Aumenta la sensibilidad al sol: usa protector solar.",
-    "precio": ""
+    "precio": "$59.778",
+    "precioBase": 59778,
+    "escalasUnidades": [],
+    "costoLlegada": 45983,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelOrd-55",
@@ -1528,7 +1800,11 @@
     ],
     "modoUso": "Aplica unas gotas en rostro limpio, mañana y noche, antes de la crema hidratante.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Haz una prueba en una zona pequeña antes del primer uso y suspende si aparece irritación. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$35.833",
+    "precioBase": 35833,
+    "escalasUnidades": [],
+    "costoLlegada": 27564,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelOrd-217",
@@ -1549,7 +1825,11 @@
     ],
     "modoUso": "Aplica una pequeña cantidad sobre la zona afectada una vez al día. Usa protector solar.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Haz una prueba en una zona pequeña antes del primer uso y suspende si aparece irritación. Mantener fuera del alcance de los niños. Aumenta la sensibilidad al sol: usa protector solar.",
-    "precio": ""
+    "precio": "$41.720",
+    "precioBase": 41720,
+    "escalasUnidades": [],
+    "costoLlegada": 32092,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelOrd-210",
@@ -1571,7 +1851,11 @@
     ],
     "modoUso": "Aplica una vez al día sobre la base de pestañas y cejas limpias y secas.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Haz una prueba en una zona pequeña antes del primer uso y suspende si aparece irritación. Mantener fuera del alcance de los niños. Evita el contacto directo con el ojo.",
-    "precio": ""
+    "precio": "$66.230",
+    "precioBase": 66230,
+    "escalasUnidades": [],
+    "costoLlegada": 50946,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelOrd-194",
@@ -1593,7 +1877,11 @@
     ],
     "modoUso": "Aplica una capa fina en rostro limpio, mañana y/o noche.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Haz una prueba en una zona pequeña antes del primer uso y suspende si aparece irritación. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$70.858",
+    "precioBase": 70858,
+    "escalasUnidades": [],
+    "costoLlegada": 54506,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelJus-001",
@@ -1615,7 +1903,11 @@
     ],
     "modoUso": "Mezcla según las instrucciones, aplica sobre la barba, deja actuar el tiempo indicado y enjuaga.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Haz una prueba en una zona pequeña antes del primer uso y suspende si aparece irritación. Mantener fuera del alcance de los niños. Realiza la prueba de alergia 48 h antes de cada uso, como indica el empaque.",
-    "precio": ""
+    "precio": "$66.013",
+    "precioBase": 66013,
+    "escalasUnidades": [],
+    "costoLlegada": 50779,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "Beba+D-406",
@@ -1638,7 +1930,11 @@
     ],
     "modoUso": "Aplica en cada cambio de pañal sobre la piel limpia y seca.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Suspende si aparece irritación y consulta al pediatra. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$37.922",
+    "precioBase": 37922,
+    "escalasUnidades": [],
+    "costoLlegada": 29171,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BebEuc-388",
@@ -1661,7 +1957,11 @@
     ],
     "modoUso": "Aplica sobre la piel húmeda durante el baño y enjuaga. Uso diario.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Suspende si aparece irritación y consulta al pediatra. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$77.752",
+    "precioBase": 77752,
+    "escalasUnidades": [],
+    "costoLlegada": 59809,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BebDrb-001",
@@ -1683,7 +1983,11 @@
     ],
     "modoUso": "Esteriliza antes del primer uso. Arma el sistema de ventilación según el instructivo.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Suspende si aparece irritación y consulta al pediatra. Mantener fuera del alcance de los niños. Usar siempre bajo supervisión de un adulto.",
-    "precio": ""
+    "precio": "$23.888",
+    "precioBase": 23888,
+    "escalasUnidades": [],
+    "costoLlegada": 18375,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BebAqu-163",
@@ -1708,7 +2012,11 @@
     ],
     "modoUso": "Aplica una capa fina sobre la zona seca o irritada las veces que sea necesario.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Suspende si aparece irritación y consulta al pediatra. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$40.392",
+    "precioBase": 40392,
+    "escalasUnidades": [],
+    "costoLlegada": 31071,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelFix-001",
@@ -1729,7 +2037,11 @@
     ],
     "modoUso": "Espolvorea sobre la dentadura limpia y húmeda, retira el exceso y colócala. Usa según necesidad.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Haz una prueba en una zona pequeña antes del primer uso y suspende si aparece irritación. Mantener fuera del alcance de los niños. Para uso dental. No ingerir el producto.",
-    "precio": ""
+    "precio": "$39.542",
+    "precioBase": 39542,
+    "escalasUnidades": [],
+    "costoLlegada": 30417,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelVic-457",
@@ -1752,7 +2064,11 @@
     ],
     "modoUso": "Rocía sobre la piel a unos 15-20 cm de distancia. Reaplica durante el día.",
     "advertencias": "Solo para uso externo. Producto inflamable: mantener lejos del fuego. Evita el contacto con los ojos. Suspende si aparece irritación.",
-    "precio": ""
+    "precio": "$49.015",
+    "precioBase": 49015,
+    "escalasUnidades": [],
+    "costoLlegada": 37704,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelVic-459",
@@ -1775,7 +2091,11 @@
     ],
     "modoUso": "Rocía sobre la piel a unos 15-20 cm de distancia. Reaplica durante el día.",
     "advertencias": "Solo para uso externo. Producto inflamable: mantener lejos del fuego. Evita el contacto con los ojos. Suspende si aparece irritación.",
-    "precio": ""
+    "precio": "$48.138",
+    "costoLlegada": 37029,
+    "margenSugeridoPct": 30,
+    "precioBase": 48138,
+    "escalasUnidades": []
   },
   {
     "sku": "BelVic-461",
@@ -1798,7 +2118,11 @@
     ],
     "modoUso": "Rocía sobre la piel a unos 15-20 cm de distancia. Reaplica durante el día.",
     "advertencias": "Solo para uso externo. Producto inflamable: mantener lejos del fuego. Evita el contacto con los ojos. Suspende si aparece irritación.",
-    "precio": ""
+    "precio": "$63.769",
+    "precioBase": 63769,
+    "escalasUnidades": [],
+    "costoLlegada": 49053,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelVic-458",
@@ -1821,7 +2145,11 @@
     ],
     "modoUso": "Rocía sobre la piel a unos 15-20 cm de distancia. Reaplica durante el día.",
     "advertencias": "Solo para uso externo. Producto inflamable: mantener lejos del fuego. Evita el contacto con los ojos. Suspende si aparece irritación.",
-    "precio": ""
+    "precio": "$44.424",
+    "precioBase": 44424,
+    "escalasUnidades": [],
+    "costoLlegada": 34172,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelVic-462",
@@ -1846,7 +2174,11 @@
     ],
     "modoUso": "Aplica sobre la piel limpia y seca, masajeando hasta absorber. Uso diario.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Haz una prueba en una zona pequeña antes del primer uso y suspende si aparece irritación. Mantener fuera del alcance de los niños.",
-    "precio": ""
+    "precio": "$44.559",
+    "precioBase": 44559,
+    "escalasUnidades": [],
+    "costoLlegada": 34276,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "BelDif-001",
@@ -1868,7 +2200,11 @@
     ],
     "modoUso": "Aplica una capa fina sobre el rostro limpio una vez al día, por la noche. Usa protector solar de día.",
     "advertencias": "Solo para uso externo. Evita el contacto con los ojos. Haz una prueba en una zona pequeña antes del primer uso y suspende si aparece irritación. Mantener fuera del alcance de los niños. Puede causar sequedad o enrojecimiento al inicio. Aumenta la sensibilidad al sol.",
-    "precio": ""
+    "precio": "$62.604",
+    "precioBase": 62604,
+    "escalasUnidades": [],
+    "costoLlegada": 48157,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "AniMil-002",
@@ -1892,7 +2228,11 @@
     ],
     "modoUso": "Ofrece como premio según el tamaño del perro. No reemplaza el alimento principal.",
     "advertencias": "Exclusivo para uso en mascotas. Proporciona agua fresca. Consulta a tu veterinario ante cualquier duda o condición de salud de tu mascota.",
-    "precio": ""
+    "precio": "$54.952",
+    "precioBase": 54952,
+    "escalasUnidades": [],
+    "costoLlegada": 42271,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "AniMil-001",
@@ -1916,7 +2256,11 @@
     ],
     "modoUso": "Ofrece como premio según el tamaño del perro. No reemplaza el alimento principal.",
     "advertencias": "Exclusivo para uso en mascotas. Proporciona agua fresca. Consulta a tu veterinario ante cualquier duda o condición de salud de tu mascota.",
-    "precio": ""
+    "precio": "$52.673",
+    "precioBase": 52673,
+    "escalasUnidades": [],
+    "costoLlegada": 40518,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "AniPip-316",
@@ -1938,7 +2282,11 @@
     ],
     "modoUso": "Administra según el peso de la mascota, mezclado con el alimento. Ver etiqueta.",
     "advertencias": "Exclusivo para uso en mascotas. Proporciona agua fresca. Consulta a tu veterinario ante cualquier duda o condición de salud de tu mascota.",
-    "precio": ""
+    "precio": "$43.861",
+    "precioBase": 43861,
+    "escalasUnidades": [],
+    "costoLlegada": 33739,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "AniVit-001",
@@ -1960,7 +2308,11 @@
     ],
     "modoUso": "Ofrece como premio. No reemplaza el alimento principal.",
     "advertencias": "Exclusivo para uso en mascotas. Proporciona agua fresca. Consulta a tu veterinario ante cualquier duda o condición de salud de tu mascota.",
-    "precio": ""
+    "precio": "$81.292",
+    "precioBase": 81292,
+    "escalasUnidades": [],
+    "costoLlegada": 62532,
+    "margenSugeridoPct": 30
   },
   {
     "sku": "AniCos-141",
@@ -1984,6 +2336,10 @@
     ],
     "modoUso": "Administra según el peso del perro, indicado en la etiqueta.",
     "advertencias": "Exclusivo para uso en mascotas. Proporciona agua fresca. Consulta a tu veterinario ante cualquier duda o condición de salud de tu mascota.",
-    "precio": ""
+    "precio": "$170.483",
+    "precioBase": 170483,
+    "escalasUnidades": [],
+    "costoLlegada": 131141,
+    "margenSugeridoPct": 30
   }
 ]

@@ -1,7 +1,9 @@
-import { db, COLLECTION, collection, getDocs, query, orderBy } from "./firebase-config.js";
-import { precioUnitario, tienePrecio, money } from "./pricing.js";
+import { db, COLLECTION, collection, getDocs, getDoc, doc, query, orderBy } from "./firebase-config.js";
+import { DEFAULT_WHOLESALE_RULES, precioUnitario, tienePrecio, money, normalizeWholesaleRules, quoteTotals } from "./pricing.js";
 
 const CART_KEY = "catalogo_cart_v1";
+const CONFIG_COLLECTION = "catalogo_config";
+const PRICING_DOC = "pricing";
 
 const state = {
   all: [],
@@ -9,6 +11,9 @@ const state = {
   category: "Todas",
   search: "",
   current: null,        // producto abierto en el modal
+  currentImages: [],
+  currentImageIdx: 0,
+  wholesaleRules: DEFAULT_WHOLESALE_RULES,
   cart: loadCart(),     // { [sku]: cantidad }
 };
 
@@ -26,6 +31,10 @@ const els = {
   cart: document.getElementById("cart"),
   cartItems: document.getElementById("cart-items"),
   cartEmpty: document.getElementById("cart-empty"),
+  cartSubtotal: document.getElementById("cart-subtotal"),
+  cartDiscountRow: document.getElementById("cart-discount-row"),
+  cartDiscountLabel: document.getElementById("cart-discount-label"),
+  cartDiscount: document.getElementById("cart-discount"),
   cartTotal: document.getElementById("cart-total"),
 };
 
@@ -49,11 +58,23 @@ async function init() {
     }
   }
 
+  await loadPricingConfig();
   buildCategoryChips();
   bindEvents();
   applyFilters();
   els.footerCount.textContent = state.all.length;
   renderCart();
+}
+
+async function loadPricingConfig() {
+  try {
+    const snap = await getDoc(doc(db, CONFIG_COLLECTION, PRICING_DOC));
+    const data = snap.exists() ? snap.data() : {};
+    state.wholesaleRules = normalizeWholesaleRules(data.wholesaleRules);
+  } catch (err) {
+    console.warn("[pricing-config]", err);
+    state.wholesaleRules = DEFAULT_WHOLESALE_RULES;
+  }
 }
 
 /* ---------------- FILTROS / GRID ---------------- */
@@ -92,6 +113,8 @@ function bindEvents() {
     b.addEventListener("click", () => stepQty(Number(b.dataset.qty))));
   document.getElementById("m-qty").addEventListener("input", refreshModalLineTotal);
   document.getElementById("m-add").addEventListener("click", addCurrentToCart);
+  document.getElementById("m-img-prev").addEventListener("click", () => stepCarousel(-1));
+  document.getElementById("m-img-next").addEventListener("click", () => stepCarousel(1));
 
   // Panel de cotización
   els.fab.addEventListener("click", openCart);
@@ -128,12 +151,13 @@ function render() {
   state.filtered.forEach((p) => {
     const card = document.createElement("article");
     card.className = "card";
-    const precioTxt = tienePrecio(p) ? `Desde ${money(precioUnitario(p, biggestQty(p)))}` : "";
+    const precioTxt = tienePrecio(p) ? `${money(p.precioBase)} sugerido` : "";
+    const img = productImages(p)[0];
     card.innerHTML = `
       <div class="card-media">
         ${
-          p.imagen
-            ? `<img src="${escapeAttr(p.imagen)}" alt="${escapeAttr(p.nombre)}" loading="lazy" onerror="this.parentNode.innerHTML='<span class=&quot;ph&quot;>Sin imagen</span>'" />`
+          img
+            ? `<img src="${escapeAttr(img)}" alt="${escapeAttr(p.nombre)}" loading="lazy" onerror="this.parentNode.innerHTML='<span class=&quot;ph&quot;>Sin imagen</span>'" />`
             : '<span class="ph">Sin imagen</span>'
         }
       </div>
@@ -158,9 +182,9 @@ function biggestQty(p) {
 /* ---------------- MODAL + COTIZADOR ---------------- */
 function openModal(p) {
   state.current = p;
-  const img = document.getElementById("m-img");
-  img.src = p.imagen || "";
-  img.alt = p.nombre || "";
+  state.currentImages = productImages(p);
+  state.currentImageIdx = 0;
+  renderCarousel();
   setText("m-name", p.nombre || p.sku);
   setText("m-sku", "SKU: " + p.sku);
   setBadge("m-cat", p.categoria);
@@ -171,13 +195,15 @@ function openModal(p) {
   const cotizar = document.getElementById("m-cotizar");
   if (tienePrecio(p)) {
     cotizar.style.display = "";
-    precioEl.textContent = `${money(p.precioBase)} c/u`;
+    precioEl.textContent = `${money(p.precioBase)} precio sugerido`;
     precioEl.style.display = "";
     renderEscalas(p);
     document.getElementById("m-qty").value = state.cart[p.sku] || 1;
     refreshModalLineTotal();
   } else {
     cotizar.style.display = "none";
+    precioEl.textContent = "";
+    precioEl.style.display = "none";
   }
 
   toggleBlock("m-pres-wrap", "m-pres", p.presentacion, "text");
@@ -190,6 +216,33 @@ function openModal(p) {
 
   els.modal.hidden = false;
   document.body.style.overflow = "hidden";
+}
+
+function productImages(p) {
+  const imgs = Array.isArray(p.imagenesCatalogo) ? p.imagenesCatalogo : [];
+  return [...imgs, p.imagen].map((url) => String(url || "").trim()).filter(Boolean).slice(0, 3);
+}
+
+function renderCarousel() {
+  const wrap = document.getElementById("m-carousel");
+  const prev = document.getElementById("m-img-prev");
+  const next = document.getElementById("m-img-next");
+  const images = state.currentImages.length ? state.currentImages : [""];
+  const idx = Math.min(Math.max(state.currentImageIdx, 0), images.length - 1);
+  wrap.innerHTML = images.map((url, i) => `
+    <figure class="book-page ${i === idx ? "active" : ""} ${i < idx ? "past" : ""}">
+      ${url ? `<img src="${escapeAttr(url)}" alt="${escapeAttr(state.current?.nombre || "")}" loading="lazy" />` : '<span class="ph">Sin imagen</span>'}
+    </figure>
+  `).join("");
+  prev.style.display = images.length > 1 ? "" : "none";
+  next.style.display = images.length > 1 ? "" : "none";
+}
+
+function stepCarousel(delta) {
+  const total = state.currentImages.length;
+  if (total <= 1) return;
+  state.currentImageIdx = (state.currentImageIdx + delta + total) % total;
+  renderCarousel();
 }
 
 function renderEscalas(p) {
@@ -262,19 +315,19 @@ function cartLines() {
 function renderCart() {
   const lines = cartLines();
   const count = lines.reduce((n, l) => n + l.qty, 0);
+  const totals = quoteTotals(lines, state.wholesaleRules);
   els.cartCount.textContent = count;
   els.fab.hidden = lines.length === 0;
   els.cartEmpty.style.display = lines.length ? "none" : "";
 
   els.cartItems.innerHTML = "";
-  let total = 0;
   lines.forEach((l) => {
-    total += l.total;
     const row = document.createElement("div");
+    const img = productImages(l.p)[0];
     row.className = "cart-row";
     row.innerHTML = `
       <div class="cart-row-img">${
-        l.p.imagen ? `<img src="${escapeAttr(l.p.imagen)}" alt="" />` : '<span class="ph">—</span>'
+        img ? `<img src="${escapeAttr(img)}" alt="" />` : '<span class="ph">-</span>'
       }</div>
       <div class="cart-row-main">
         <p class="cart-row-name">${escapeHtml(l.p.nombre || l.p.sku)}</p>
@@ -299,7 +352,13 @@ function renderCart() {
     els.cartItems.appendChild(row);
   });
 
-  els.cartTotal.textContent = money(total);
+  els.cartSubtotal.textContent = money(totals.subtotal);
+  els.cartDiscountRow.style.display = totals.discount > 0 ? "" : "none";
+  els.cartDiscountLabel.textContent = totals.rule
+    ? `Descuento mayorista ${totals.discountPct}%`
+    : "Descuento";
+  els.cartDiscount.textContent = "-" + money(totals.discount);
+  els.cartTotal.textContent = money(totals.total);
 }
 
 function bumpQty(sku, delta) {
@@ -375,21 +434,32 @@ function downloadPDF() {
     total += l.total;
     y += Math.max(name.length * 12, 14) + 8;
   });
+  const totals = quoteTotals(lines, state.wholesaleRules);
 
   // Total
   y += 4;
   doc.setDrawColor(229, 231, 235).line(M, y, W - M, y);
   y += 22;
   doc.setFont("helvetica", "bold").setFontSize(13);
+  doc.text("Subtotal", colX.unit, y, { align: "right" });
+  doc.text(money(total), colX.tot, y, { align: "right" });
+  if (totals.discount > 0) {
+    y += 18;
+    doc.setFont("helvetica", "bold").setFontSize(11).setTextColor(22, 101, 52);
+    doc.text(`Descuento mayorista ${totals.discountPct}%`, colX.unit, y, { align: "right" });
+    doc.text("-" + money(totals.discount), colX.tot, y, { align: "right" });
+  }
+  y += 22;
+  doc.setFont("helvetica", "bold").setFontSize(13).setTextColor(31, 41, 55);
   doc.text("Total estimado", colX.unit, y, { align: "right" });
   doc.setTextColor(14, 116, 144);
-  doc.text(money(total), colX.tot, y, { align: "right" });
+  doc.text(money(totals.total), colX.tot, y, { align: "right" });
 
   // Nota
   y += 26;
   doc.setFont("helvetica", "italic").setFontSize(8).setTextColor(107, 114, 128);
   doc.text(
-    "Cotización referencial. Los precios varían según la cantidad y están sujetos a cambios. No es factura.",
+    "Producto sujeto a disponibilidad de unidades. Precio del transporte corre por cuenta del comprador. Cotizacion referencial, no es factura.",
     M, y, { maxWidth: W - M * 2 }
   );
 

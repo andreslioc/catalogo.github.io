@@ -43,7 +43,9 @@
       <button class="modal-close" data-close aria-label="Cerrar">&times;</button>
       <div class="modal-body">
         <div class="modal-media">
-          <img id="m-img" alt="" loading="lazy" />
+          <button id="m-img-prev" class="carousel-btn carousel-prev" type="button" aria-label="Imagen anterior">‹</button>
+          <div id="m-carousel" class="book-carousel"></div>
+          <button id="m-img-next" class="carousel-btn carousel-next" type="button" aria-label="Imagen siguiente">›</button>
         </div>
         <div class="modal-info">
           <div class="badges">
@@ -129,11 +131,15 @@
       <div id="cart-items" class="cart-items"></div>
       <p id="cart-empty" class="cart-empty">Aún no agregas productos. Abre un producto y pulsa “Agregar a cotización”.</p>
       <div class="cart-foot">
+        <div class="cart-breakdown">
+          <div><span>Subtotal</span><strong id="cart-subtotal">$0</strong></div>
+          <div id="cart-discount-row"><span id="cart-discount-label">Descuento</span><strong id="cart-discount">$0</strong></div>
+        </div>
         <div class="cart-total-row">
           <span>Total estimado</span>
           <strong id="cart-total">$0</strong>
         </div>
-        <p class="cart-note">Los precios varían según la cantidad. Cotización referencial, no es factura.</p>
+        <p class="cart-note">Producto sujeto a disponibilidad. El transporte corre por cuenta del comprador. Cotización referencial, no es factura.</p>
         <div class="cart-foot-actions">
           <button id="cart-clear" class="btn-clear">Vaciar</button>
           <button id="cart-pdf" class="btn-pdf">Descargar PDF</button>

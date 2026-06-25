@@ -3,7 +3,7 @@
 // dashboard, proyecto ventasdashboard-e48b2.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
-  getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, orderBy,
+  getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
@@ -25,6 +25,6 @@ export const auth = getAuth(app);
 export const COLLECTION = "catalogo_productos";
 
 export {
-  collection, getDocs, doc, setDoc, deleteDoc, query, orderBy,
+  collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signInWithEmailAndPassword, signOut, onAuthStateChanged,
 };

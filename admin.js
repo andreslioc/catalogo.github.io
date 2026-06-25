@@ -1,24 +1,32 @@
 import {
   db, auth, COLLECTION,
-  collection, getDocs, doc, setDoc, deleteDoc, query, orderBy,
+  collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signInWithEmailAndPassword, signOut, onAuthStateChanged,
 } from "./firebase-config.js";
+import {
+  DEFAULT_MARGIN_PCT,
+  DEFAULT_WHOLESALE_RULES,
+  money,
+  precioSugeridoDesdeCosto,
+} from "./pricing.js";
 
 const TEXT_FIELDS = [
   "nombre", "sku", "marca", "imagen", "categoria",
   "descripcion", "dosis", "modoUso", "advertencias", "presentacion",
 ];
 const LIST_FIELDS = ["beneficios", "ingredientes"];
+const CONFIG_COLLECTION = "catalogo_config";
+const PRICING_DOC = "pricing";
 
 const state = {
   products: [],
-  deleted: new Set(),   // skus originales eliminados (para borrar en Firestore)
+  wholesaleRules: DEFAULT_WHOLESALE_RULES.map((r) => ({ ...r })),
+  deleted: new Set(),
   search: "",
   dirty: false,
 };
 const els = {};
 
-/* ---------------- AUTH ---------------- */
 function initAuth() {
   const form = document.getElementById("login-form");
   const email = document.getElementById("login-email");
@@ -34,16 +42,15 @@ function initAuth() {
     btn.disabled = true;
     try {
       await signInWithEmailAndPassword(auth, email.value.trim(), pass.value);
-      // onAuthStateChanged se encarga de mostrar la app.
     } catch (err) {
       const map = {
-        "auth/invalid-credential": "Correo o contraseña incorrectos.",
-        "auth/invalid-email": "Correo no válido.",
+        "auth/invalid-credential": "Correo o contrasena incorrectos.",
+        "auth/invalid-email": "Correo no valido.",
         "auth/user-not-found": "No existe una cuenta con ese correo.",
-        "auth/wrong-password": "Contraseña incorrecta.",
+        "auth/wrong-password": "Contrasena incorrecta.",
         "auth/too-many-requests": "Demasiados intentos. Espera un momento.",
       };
-      showError(map[err?.code] || ("No se pudo iniciar sesión: " + (err?.code || err)));
+      showError(map[err?.code] || ("No se pudo iniciar sesion: " + (err?.code || err)));
       pass.select();
     } finally {
       btn.disabled = false;
@@ -69,15 +76,16 @@ function initAuth() {
   });
 }
 
-/* ---------------- APP ---------------- */
 let started = false;
 async function startApp() {
-  if (started) return;       // evita doble init si Auth re-emite
+  if (started) return;
   started = true;
   cacheEls();
   bindToolbar();
+  await loadPricingConfig();
   await loadData();
   refreshCategories();
+  renderRules();
   render();
 }
 
@@ -85,6 +93,8 @@ function cacheEls() {
   els.editor = document.getElementById("editor");
   els.tpl = document.getElementById("row-tpl");
   els.escalaTpl = document.getElementById("escala-tpl");
+  els.ruleTpl = document.getElementById("rule-tpl");
+  els.rules = document.getElementById("wholesale-rules");
   els.status = document.getElementById("status");
   els.count = document.getElementById("admin-count");
   els.search = document.getElementById("admin-search");
@@ -105,8 +115,27 @@ function bindToolbar() {
   });
 }
 
+async function loadPricingConfig() {
+  try {
+    const snap = await getDoc(doc(db, CONFIG_COLLECTION, PRICING_DOC));
+    const data = snap.exists() ? snap.data() : {};
+    const rules = Array.isArray(data.wholesaleRules) && data.wholesaleRules.length
+      ? data.wholesaleRules
+      : DEFAULT_WHOLESALE_RULES;
+    state.wholesaleRules = rules.map((rule) => ({
+      desdeMonto: Number(rule.desdeMonto) || 0,
+      minUnidadesPorReferencia: Math.max(1, Number(rule.minUnidadesPorReferencia) || 1),
+      descuentoPct: Number(rule.descuentoPct) || 0,
+      activo: rule.activo !== false,
+    }));
+  } catch (err) {
+    state.wholesaleRules = DEFAULT_WHOLESALE_RULES.map((r) => ({ ...r }));
+    toast("No se pudieron cargar las reglas mayoristas: " + (err?.code || err), true);
+  }
+}
+
 async function loadData() {
-  setStatus("Cargando desde Firestore…");
+  setStatus("Cargando desde Firestore...");
   try {
     let snap;
     try {
@@ -117,7 +146,7 @@ async function loadData() {
     state.products = snap.docs.map((d) => normalizeProduct({ ...d.data(), _origSku: d.data().sku }));
   } catch (err) {
     state.products = [];
-    toast("No se pudo cargar el catálogo: " + (err?.code || err), true);
+    toast("No se pudo cargar el catalogo: " + (err?.code || err), true);
   }
   state.dirty = false;
   state.deleted.clear();
@@ -127,6 +156,10 @@ async function loadData() {
 function normalizeProduct(p) {
   TEXT_FIELDS.forEach((f) => { if (typeof p[f] !== "string") p[f] = p[f] == null ? "" : String(p[f]); });
   LIST_FIELDS.forEach((f) => { if (!Array.isArray(p[f])) p[f] = []; });
+  p.imagenesCatalogo = Array.isArray(p.imagenesCatalogo) ? p.imagenesCatalogo.slice(0, 3).map((v) => String(v || "")) : [];
+  while (p.imagenesCatalogo.length < 3) p.imagenesCatalogo.push("");
+  p.costoLlegada = Number(p.costoLlegada) || 0;
+  p.margenSugeridoPct = Number.isFinite(Number(p.margenSugeridoPct)) ? Number(p.margenSugeridoPct) : DEFAULT_MARGIN_PCT;
   p.precioBase = Number(p.precioBase) || 0;
   p.escalasUnidades = Array.isArray(p.escalasUnidades)
     ? p.escalasUnidades.map((e) => ({ desde: Number(e.desde) || 0, precio: Number(e.precio) || 0 }))
@@ -135,7 +168,26 @@ function normalizeProduct(p) {
   return p;
 }
 
-/* ---------------- RENDER ---------------- */
+function renderRules() {
+  els.rules.innerHTML = "";
+  state.wholesaleRules.forEach((rule) => {
+    const node = els.ruleTpl.content.firstElementChild.cloneNode(true);
+    const monto = node.querySelector(".r-monto");
+    const min = node.querySelector(".r-min");
+    const pct = node.querySelector(".r-pct");
+    const activo = node.querySelector(".r-activo");
+    monto.value = rule.desdeMonto || "";
+    min.value = rule.minUnidadesPorReferencia || 1;
+    pct.value = rule.descuentoPct || "";
+    activo.checked = rule.activo !== false;
+    monto.addEventListener("input", () => { rule.desdeMonto = Number(monto.value) || 0; markDirty(); });
+    min.addEventListener("input", () => { rule.minUnidadesPorReferencia = Number(min.value) || 1; markDirty(); });
+    pct.addEventListener("input", () => { rule.descuentoPct = Number(pct.value) || 0; markDirty(); });
+    activo.addEventListener("change", () => { rule.activo = activo.checked; markDirty(); });
+    els.rules.appendChild(node);
+  });
+}
+
 function render() {
   const q = state.search;
   const visible = q
@@ -152,13 +204,12 @@ function render() {
 
 function buildRow(p) {
   const node = els.tpl.content.firstElementChild.cloneNode(true);
-
   const thumb = node.querySelector(".edit-thumb");
   const setThumb = (url) => {
     if (url) { thumb.src = url; thumb.style.display = ""; }
     else { thumb.removeAttribute("src"); thumb.style.display = "none"; }
   };
-  setThumb(p.imagen);
+  setThumb(p.imagenesCatalogo.find(Boolean) || p.imagen);
 
   TEXT_FIELDS.forEach((f) => {
     const input = node.querySelector(".f-" + f);
@@ -166,7 +217,7 @@ function buildRow(p) {
     input.value = p[f] || "";
     input.addEventListener("input", () => {
       p[f] = input.value;
-      if (f === "imagen") setThumb(input.value.trim());
+      if (f === "imagen") setThumb(p.imagenesCatalogo.find(Boolean) || input.value.trim());
       markDirty();
     });
   });
@@ -181,12 +232,43 @@ function buildRow(p) {
     });
   });
 
-  // Precio base
-  const baseInput = node.querySelector(".f-precioBase");
-  baseInput.value = p.precioBase || "";
-  baseInput.addEventListener("input", () => { p.precioBase = Number(baseInput.value) || 0; markDirty(); });
+  bindPriceFields(node, p);
+  bindImageFields(node, p, setThumb);
+  bindScaleFields(node, p);
+  bindDelete(node, p);
+  return node;
+}
 
-  // Escalas
+function bindPriceFields(node, p) {
+  const costInput = node.querySelector(".f-costoLlegada");
+  const marginInput = node.querySelector(".f-margenSugeridoPct");
+  const baseInput = node.querySelector(".f-precioBase");
+  costInput.value = p.costoLlegada || "";
+  marginInput.value = p.margenSugeridoPct ?? DEFAULT_MARGIN_PCT;
+  baseInput.value = p.precioBase || "";
+  costInput.addEventListener("input", () => { p.costoLlegada = Number(costInput.value) || 0; markDirty(); });
+  marginInput.addEventListener("input", () => { p.margenSugeridoPct = Number(marginInput.value) || DEFAULT_MARGIN_PCT; markDirty(); });
+  baseInput.addEventListener("input", () => { p.precioBase = Number(baseInput.value) || 0; markDirty(); });
+  node.querySelector(".btn-calc-price").addEventListener("click", () => {
+    p.precioBase = precioSugeridoDesdeCosto(p.costoLlegada, p.margenSugeridoPct);
+    baseInput.value = p.precioBase || "";
+    markDirty();
+  });
+}
+
+function bindImageFields(node, p, setThumb) {
+  [".f-img1", ".f-img2", ".f-img3"].forEach((selector, idx) => {
+    const input = node.querySelector(selector);
+    input.value = p.imagenesCatalogo[idx] || "";
+    input.addEventListener("input", () => {
+      p.imagenesCatalogo[idx] = input.value.trim();
+      setThumb(p.imagenesCatalogo.find(Boolean) || p.imagen);
+      markDirty();
+    });
+  });
+}
+
+function bindScaleFields(node, p) {
   const rowsWrap = node.querySelector(".escalas-rows");
   const renderEscalas = () => {
     rowsWrap.innerHTML = "";
@@ -198,10 +280,12 @@ function buildRow(p) {
     markDirty();
     renderEscalas();
   });
+}
 
+function bindDelete(node, p) {
   node.querySelector(".btn-del").addEventListener("click", () => {
     const label = p.nombre || p.sku || "este producto";
-    if (!confirm(`¿Eliminar "${label}" del catálogo?`)) return;
+    if (!confirm(`Eliminar "${label}" del catalogo?`)) return;
     if (p._origSku) state.deleted.add(p._origSku);
     const i = state.products.indexOf(p);
     if (i >= 0) state.products.splice(i, 1);
@@ -209,8 +293,6 @@ function buildRow(p) {
     refreshCategories();
     render();
   });
-
-  return node;
 }
 
 function buildEscalaRow(p, esc, idx, rerender) {
@@ -234,7 +316,6 @@ function refreshCategories() {
   els.catList.innerHTML = cats.map((c) => `<option value="${escapeAttr(c)}"></option>`).join("");
 }
 
-/* ---------------- ACCIONES ---------------- */
 function addProduct() {
   const nuevo = normalizeProduct({ sku: "", nombre: "", imagen: "", categoria: "", marca: "", _origSku: null });
   state.products.unshift(nuevo);
@@ -255,7 +336,7 @@ function validate() {
     const sku = (p.sku || "").trim();
     if (!sku) return "Hay un producto sin SKU. El SKU es obligatorio.";
     const key = sku.toLowerCase();
-    if (seen.has(key)) return `SKU duplicado: "${sku}". Cada producto necesita un SKU único.`;
+    if (seen.has(key)) return `SKU duplicado: "${sku}". Cada producto necesita un SKU unico.`;
     seen.add(key);
   }
   return null;
@@ -263,12 +344,18 @@ function validate() {
 
 function docId(sku) { return sku.trim().replace(/\//g, "_"); }
 
-/** Limpia el objeto producto para Firestore (sin campos internos). */
 function toFirestore(p, orden) {
   const out = { orden };
   TEXT_FIELDS.forEach((f) => { out[f] = p[f] || ""; });
   LIST_FIELDS.forEach((f) => { out[f] = Array.isArray(p[f]) ? p[f] : []; });
   out.precioBase = Number(p.precioBase) || 0;
+  out.precio = out.precioBase > 0 ? money(out.precioBase) : "";
+  out.costoLlegada = Number(p.costoLlegada) || 0;
+  out.margenSugeridoPct = Number(p.margenSugeridoPct) || DEFAULT_MARGIN_PCT;
+  out.imagenesCatalogo = (Array.isArray(p.imagenesCatalogo) ? p.imagenesCatalogo : [])
+    .map((url) => String(url || "").trim())
+    .filter(Boolean)
+    .slice(0, 3);
   out.escalasUnidades = (p.escalasUnidades || [])
     .map((e) => ({ desde: Number(e.desde) || 0, precio: Number(e.precio) || 0 }))
     .filter((e) => e.desde > 0 && e.precio > 0);
@@ -279,36 +366,44 @@ async function save() {
   const err = validate();
   if (err) { toast(err, true); return; }
 
-  setStatus("Guardando en Firestore…");
+  setStatus("Guardando en Firestore...");
   try {
-    // 1) Escribe / actualiza cada producto.
     for (let i = 0; i < state.products.length; i++) {
       const p = state.products[i];
       const id = docId(p.sku);
       await setDoc(doc(db, COLLECTION, id), toFirestore(p, i));
-      // Si renombraron el SKU, borra el documento viejo.
       if (p._origSku && docId(p._origSku) !== id) {
         await deleteDoc(doc(db, COLLECTION, docId(p._origSku)));
       }
       p._origSku = p.sku;
     }
-    // 2) Borra los eliminados (que no se hayan recreado con el mismo SKU).
+
     const vivos = new Set(state.products.map((p) => docId(p.sku)));
     for (const origSku of state.deleted) {
       const id = docId(origSku);
       if (!vivos.has(id)) await deleteDoc(doc(db, COLLECTION, id));
     }
+
+    await setDoc(doc(db, CONFIG_COLLECTION, PRICING_DOC), {
+      wholesaleRules: state.wholesaleRules.map((rule) => ({
+        desdeMonto: Number(rule.desdeMonto) || 0,
+        minUnidadesPorReferencia: Math.max(1, Number(rule.minUnidadesPorReferencia) || 1),
+        descuentoPct: Number(rule.descuentoPct) || 0,
+        activo: rule.activo !== false,
+      })),
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+
     state.deleted.clear();
     state.dirty = false;
     setStatus(`Guardado en Firestore · ${state.products.length} productos`);
-    toast("Cambios guardados ✓ Ya están en vivo en el catálogo.");
+    toast("Cambios guardados. Ya estan en vivo en el catalogo.");
   } catch (e) {
     toast("Error al guardar: " + (e?.code || e), true);
-    setStatus("Error al guardar. Revisa tu sesión y vuelve a intentar.");
+    setStatus("Error al guardar. Revisa tu sesion y vuelve a intentar.");
   }
 }
 
-/* ---------------- UI HELPERS ---------------- */
 function setStatus(html) { els.status.innerHTML = html; }
 
 let toastTimer = null;

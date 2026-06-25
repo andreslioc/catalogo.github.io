@@ -41,6 +41,16 @@
       </div>
     </header>
 
+    <section class="admin-settings">
+      <div class="settings-card">
+        <div>
+          <h2>Reglas mayoristas</h2>
+          <p>Se aplican sobre el total acumulado de la cotizacion.</p>
+        </div>
+        <div id="wholesale-rules" class="wholesale-rules"></div>
+      </div>
+    </section>
+
     <main id="editor" class="editor"></main>
 
     <div id="toast" class="toast" hidden></div>
@@ -65,9 +75,18 @@
       <div class="price-box">
         <div class="price-base">
           <label class="field">
-            <span>Precio base (1 unidad)</span>
+            <span>Costo llegada COP</span>
+            <input class="f-costoLlegada" type="number" min="0" step="any" placeholder="ej. 35000" />
+          </label>
+          <label class="field">
+            <span>Margen %</span>
+            <input class="f-margenSugeridoPct" type="number" min="0" step="any" placeholder="30" />
+          </label>
+          <label class="field">
+            <span>Precio sugerido</span>
             <input class="f-precioBase" type="number" min="0" step="any" placeholder="ej. 45000" />
           </label>
+          <button type="button" class="btn-calc-price">Calcular costo + margen</button>
         </div>
         <div class="escalas-editor">
           <div class="escalas-head">
@@ -83,6 +102,18 @@
         <label class="field">
           <span>Imagen (URL)</span>
           <input class="f-imagen" placeholder="https://…" />
+        </label>
+        <label class="field field-full">
+          <span>Imagen 1 premium</span>
+          <input class="f-img1" placeholder="URL de foto premium" />
+        </label>
+        <label class="field field-full">
+          <span>Imagen 2 beneficios</span>
+          <input class="f-img2" placeholder="URL de imagen de beneficios" />
+        </label>
+        <label class="field field-full">
+          <span>Imagen 3 sellos</span>
+          <input class="f-img3" placeholder="URL de imagen de sellos/verificacion" />
         </label>
         <label class="field">
           <span>Categoría</span>
@@ -126,6 +157,15 @@
       <label>Desde <input class="e-desde" type="number" min="2" step="1" placeholder="10" /> uds</label>
       <label>Precio <input class="e-precio" type="number" min="0" step="any" placeholder="41000" /></label>
       <button type="button" class="escala-del" title="Quitar escala">✕</button>
+    </div>
+  </template>
+
+  <template id="rule-tpl">
+    <div class="rule-row">
+      <label>Monto desde <input class="r-monto" type="number" min="0" step="1000" /></label>
+      <label>Min. uds/ref <input class="r-min" type="number" min="1" step="1" /></label>
+      <label>Descuento % <input class="r-pct" type="number" min="0" max="100" step="0.1" /></label>
+      <label class="rule-check"><input class="r-activo" type="checkbox" /> Activa</label>
     </div>
   </template>
 
