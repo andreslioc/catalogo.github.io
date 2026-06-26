@@ -182,8 +182,7 @@ async function loadData() {
 function normalizeProduct(p) {
   TEXT_FIELDS.forEach((f) => { if (typeof p[f] !== "string") p[f] = p[f] == null ? "" : String(p[f]); });
   LIST_FIELDS.forEach((f) => { if (!Array.isArray(p[f])) p[f] = []; });
-  p.imagenesCatalogo = Array.isArray(p.imagenesCatalogo) ? p.imagenesCatalogo.slice(0, 3).map((v) => String(v || "")) : [];
-  while (p.imagenesCatalogo.length < 3) p.imagenesCatalogo.push("");
+  p.imagenesCatalogo = [];
   p.costoLlegada = Number(p.costoLlegada) || 0;
   p.margenSugeridoPct = Number.isFinite(Number(p.margenSugeridoPct)) ? Number(p.margenSugeridoPct) : DEFAULT_MARGIN_PCT;
   p.precioBase = Number(p.precioBase) || 0;
@@ -235,7 +234,7 @@ function buildRow(p) {
     if (url) { thumb.src = url; thumb.style.display = ""; }
     else { thumb.removeAttribute("src"); thumb.style.display = "none"; }
   };
-  setThumb(p.imagenesCatalogo.find(Boolean) || p.imagen);
+  setThumb(p.imagen);
 
   TEXT_FIELDS.forEach((f) => {
     const input = node.querySelector(".f-" + f);
@@ -243,7 +242,7 @@ function buildRow(p) {
     input.value = p[f] || "";
     input.addEventListener("input", () => {
       p[f] = input.value;
-      if (f === "imagen") setThumb(p.imagenesCatalogo.find(Boolean) || input.value.trim());
+      if (f === "imagen") setThumb(input.value.trim());
       markDirty();
     });
   });
@@ -285,10 +284,11 @@ function bindPriceFields(node, p) {
 function bindImageFields(node, p, setThumb) {
   [".f-img1", ".f-img2", ".f-img3"].forEach((selector, idx) => {
     const input = node.querySelector(selector);
+    if (!input) return;
     input.value = p.imagenesCatalogo[idx] || "";
     input.addEventListener("input", () => {
       p.imagenesCatalogo[idx] = input.value.trim();
-      setThumb(p.imagenesCatalogo.find(Boolean) || p.imagen);
+      setThumb(p.imagen);
       markDirty();
     });
   });
@@ -378,10 +378,7 @@ function toFirestore(p, orden) {
   out.precio = out.precioBase > 0 ? money(out.precioBase) : "";
   out.costoLlegada = Number(p.costoLlegada) || 0;
   out.margenSugeridoPct = Number(p.margenSugeridoPct) || DEFAULT_MARGIN_PCT;
-  out.imagenesCatalogo = (Array.isArray(p.imagenesCatalogo) ? p.imagenesCatalogo : [])
-    .map((url) => String(url || "").trim())
-    .filter(Boolean)
-    .slice(0, 3);
+  out.imagenesCatalogo = [];
   out.escalasUnidades = (p.escalasUnidades || [])
     .map((e) => ({ desde: Number(e.desde) || 0, precio: Number(e.precio) || 0 }))
     .filter((e) => e.desde > 0 && e.precio > 0);

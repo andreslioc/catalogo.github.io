@@ -44,6 +44,7 @@ const els = {
   cartDiscount: document.getElementById("cart-discount"),
   cartTotal: document.getElementById("cart-total"),
   infoBook: document.getElementById("m-info-book"),
+  turnSheet: document.getElementById("m-turn-sheet"),
   adminMenu: document.getElementById("admin-menu"),
   adminLogin: document.getElementById("admin-login"),
   adminForm: document.getElementById("admin-login-form"),
@@ -292,6 +293,7 @@ function openModal(p) {
   state.currentPrevImageIdx = null;
   if (state.currentTurnTimer) clearTimeout(state.currentTurnTimer);
   state.currentTurnTimer = null;
+  clearTurnSheet();
   renderCarousel();
   setText("m-name", p.nombre || p.sku);
   setText("m-sku", "SKU: " + p.sku);
@@ -321,8 +323,8 @@ function openModal(p) {
 }
 
 function productImages(p) {
-  const imgs = Array.isArray(p.imagenesCatalogo) ? p.imagenesCatalogo : [];
-  return [...imgs, p.imagen].map((url) => String(url || "").trim()).filter(Boolean).slice(0, 3);
+  const stock = String(p?.imagen || "").trim();
+  return stock ? [stock] : [];
 }
 
 function modalPageCount() {
@@ -336,21 +338,7 @@ function renderCarousel() {
   const images = state.currentImages.length ? state.currentImages : [""];
   const total = modalPageCount();
   const idx = state.currentImageIdx % images.length;
-  const turning = state.currentPrevImageIdx !== null;
-  const directionClass = state.currentTurnDirection > 0 ? "turn-next" : "turn-prev";
-  const prevIdx = state.currentPrevImageIdx === null ? idx : state.currentPrevImageIdx % images.length;
-  const pages = turning
-    ? [
-        { url: images[idx], index: idx, cls: `active incoming ${directionClass}` },
-        { url: images[prevIdx], index: prevIdx, cls: `active turning ${directionClass}` },
-      ]
-    : [{ url: images[idx], index: idx, cls: "active" }];
-
-  wrap.innerHTML = pages.map(({ url, index, cls }) => `
-    <figure class="book-page ${cls}" aria-label="Imagen ${index + 1} de ${images.length}">
-      ${url ? `<img src="${escapeAttr(url)}" alt="${escapeAttr(state.current?.nombre || "")}" loading="lazy" />` : '<span class="ph">Sin imagen</span>'}
-    </figure>
-  `).join("");
+  wrap.innerHTML = renderImagePage(images[idx], idx, images.length, "book-page active");
   wrap.dataset.page = `${state.currentImageIdx + 1} / ${total}`;
   prev.style.display = total > 1 ? "" : "none";
   next.style.display = total > 1 ? "" : "none";
@@ -360,16 +348,113 @@ function renderCarousel() {
 function stepCarousel(delta) {
   const total = modalPageCount();
   if (total <= 1) return;
-  if (state.currentTurnTimer) clearTimeout(state.currentTurnTimer);
-  state.currentPrevImageIdx = state.currentImageIdx;
-  state.currentTurnDirection = delta >= 0 ? 1 : -1;
-  state.currentImageIdx = (state.currentImageIdx + delta + total) % total;
-  renderCarousel();
-  state.currentTurnTimer = setTimeout(() => {
-    state.currentPrevImageIdx = null;
-    state.currentTurnTimer = null;
+  if (state.currentTurnTimer) return;
+
+  const isNext = delta >= 0;
+  const previousIdx = state.currentImageIdx;
+  const nextIdx = (state.currentImageIdx + delta + total) % total;
+  state.currentPrevImageIdx = previousIdx;
+  state.currentTurnDirection = isNext ? 1 : -1;
+
+  // The turning leaf always lives on the info side (the half whose content
+  // actually changes). NEXT: the leaf carries the page we are leaving and
+  // lifts away over the spine, revealing the next page underneath. PREV: the
+  // leaf swings in from the spine carrying the previous page and settles flat.
+  renderTurnSheet(isNext ? previousIdx : nextIdx, isNext);
+
+  if (isNext) {
+    // Reveal the destination underneath as soon as the leaf starts lifting.
+    state.currentImageIdx = nextIdx;
     renderCarousel();
-  }, 720);
+  }
+
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    if (state.currentTurnTimer) clearTimeout(state.currentTurnTimer);
+    state.currentTurnTimer = null;
+    state.currentPrevImageIdx = null;
+    if (els.turnSheet) els.turnSheet.removeEventListener("animationend", onEnd);
+    if (!isNext) {
+      state.currentImageIdx = nextIdx;
+      renderCarousel();
+    }
+    clearTurnSheet();
+  };
+  const onEnd = (e) => { if (e.target === els.turnSheet) finish(); };
+  els.turnSheet.addEventListener("animationend", onEnd);
+  // Fallback in case animationend never fires (e.g. prefers-reduced-motion).
+  state.currentTurnTimer = setTimeout(finish, 950);
+}
+
+function renderImagePage(url, index, total, cls) {
+  return `
+    <figure class="${cls}" aria-label="Imagen ${index + 1} de ${total}">
+      ${url ? `<img src="${escapeAttr(url)}" alt="${escapeAttr(state.current?.nombre || "")}" loading="lazy" />` : '<span class="ph">Sin imagen</span>'}
+    </figure>
+  `;
+}
+
+function renderTurnSheet(infoPageIndex, isNext) {
+  if (!els.turnSheet || !state.current) return;
+  const infoPages = productInfoPages(state.current);
+  const infoPage = infoPages[infoPageIndex % infoPages.length];
+  const total = modalPageCount();
+  const front = `
+    <div class="turn-page-info">
+      <div class="turn-info-head">
+        <div class="badges">${renderBadgeCopy(state.current.categoria, "badge")}${renderBadgeCopy(state.current.marca, "badge badge-soft")}</div>
+        <h2>${escapeHtml(state.current.nombre || state.current.sku)}</h2>
+        <p class="sku">SKU: ${escapeHtml(state.current.sku)}</p>
+      </div>
+      ${renderQuoteCopy()}
+      ${renderInfoPage(infoPage, infoPageIndex + 1, total, "info-page active turn-copy")}
+    </div>
+  `;
+
+  // Two-faced leaf: a solid front carrying the page content and a paper back,
+  // each with backface-visibility hidden so the swap across 90deg is seamless.
+  els.turnSheet.innerHTML = `
+    <div class="turn-face turn-face-front">${front}</div>
+    <div class="turn-face turn-face-back" aria-hidden="true"></div>
+  `;
+  els.turnSheet.hidden = false;
+  els.turnSheet.className = `turn-sheet ${isNext ? "turn-next" : "turn-prev"}`;
+  els.turnSheet.getBoundingClientRect();
+  els.turnSheet.classList.add("is-turning");
+}
+
+function clearTurnSheet() {
+  if (!els.turnSheet) return;
+  els.turnSheet.hidden = true;
+  els.turnSheet.className = "turn-sheet";
+  els.turnSheet.innerHTML = "";
+}
+
+function renderBadgeCopy(text, cls) {
+  return text ? `<span class="${cls}">${escapeHtml(text)}</span>` : "";
+}
+
+function renderQuoteCopy() {
+  const p = state.current;
+  if (!p || !tienePrecio(p)) return "";
+  const qty = currentQty();
+  const unit = precioUnitario(p, qty);
+  return `
+    <div class="turn-quote">
+      <p class="precio">${money(p.precioBase)} precio sugerido</p>
+      <div class="cotizar-add">
+        <div class="qty-stepper">
+          <button type="button" aria-hidden="true">−</button>
+          <input type="number" min="1" value="${qty}" tabindex="-1" />
+          <button type="button" aria-hidden="true">+</button>
+        </div>
+        <button class="btn-add" type="button" tabindex="-1">Agregar a cotización</button>
+      </div>
+      <p class="line-total">${qty} × ${money(unit)} = ${money(unit * qty)}</p>
+    </div>
+  `;
 }
 
 function productInfoPages(p) {
@@ -423,25 +508,19 @@ function renderInfoBook() {
   const pages = productInfoPages(state.current);
   const total = modalPageCount();
   const idx = state.currentImageIdx % pages.length;
-  const turning = state.currentPrevImageIdx !== null;
-  const directionClass = state.currentTurnDirection > 0 ? "turn-next" : "turn-prev";
-  const prevIdx = state.currentPrevImageIdx === null ? idx : state.currentPrevImageIdx % pages.length;
-  const visiblePages = turning
-    ? [
-        { page: pages[idx], index: idx, cls: `active incoming ${directionClass}` },
-        { page: pages[prevIdx], index: prevIdx, cls: `active turning ${directionClass}` },
-      ]
-    : [{ page: pages[idx], index: idx, cls: "active" }];
+  els.infoBook.innerHTML = renderInfoPage(pages[idx], state.currentImageIdx + 1, total, "info-page active");
+}
 
-  els.infoBook.innerHTML = visiblePages.map(({ page, index, cls }) => `
-    <section class="info-page ${cls}" aria-label="Detalle ${state.currentImageIdx + 1} de ${total}">
+function renderInfoPage(page, pageNumber, total, cls) {
+  return `
+    <section class="${cls}" aria-label="Detalle ${pageNumber} de ${total}">
       <div class="info-page-inner">
         <p class="info-eyebrow">${escapeHtml(page.eyebrow)}</p>
         ${page.blocks.map(renderInfoBlock).join("")}
       </div>
-      <p class="info-page-count">${state.currentImageIdx + 1} / ${total}</p>
+      <p class="info-page-count">${pageNumber} / ${total}</p>
     </section>
-  `).join("");
+  `;
 }
 
 function renderInfoBlock(block) {
@@ -502,6 +581,7 @@ function closeModal() {
   if (state.currentTurnTimer) clearTimeout(state.currentTurnTimer);
   state.currentTurnTimer = null;
   state.currentPrevImageIdx = null;
+  clearTurnSheet();
   els.modal.hidden = true;
   document.body.style.overflow = "";
 }

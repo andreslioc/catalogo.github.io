@@ -168,8 +168,9 @@ body {
 .card-media img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  padding: 0;
+  object-fit: contain;
+  padding: 12px;
+  filter: drop-shadow(0 10px 12px rgba(15, 23, 42, 0.12));
 }
 .card-media .ph {
   color: #adb5bd;
@@ -234,6 +235,9 @@ body {
   background:
     linear-gradient(90deg, rgba(76, 51, 22, 0.14), transparent 4%, transparent 96%, rgba(76, 51, 22, 0.14)),
     #fbf6e9;
+  overflow: hidden;
+  perspective: 1800px;
+  transform-style: preserve-3d;
 }
 .modal-body::before {
   content: "";
@@ -310,45 +314,19 @@ body {
   transform: rotateY(0deg) translateX(0) scale(1);
   z-index: 2;
 }
-.book-page.incoming {
-  z-index: 1;
-  animation: pageSettle 0.72s ease both;
-}
-.book-page.turning {
-  z-index: 3;
-}
-.book-page.turning.turn-next {
-  transform-origin: left center;
-  animation: pageFlipNext 0.72s cubic-bezier(0.2, 0.72, 0.2, 1) forwards;
-}
-.book-page.turning.turn-prev {
-  transform-origin: right center;
-  animation: pageFlipPrev 0.72s cubic-bezier(0.2, 0.72, 0.2, 1) forwards;
-}
 .book-page img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  padding: 0;
+  object-fit: contain;
+  padding: 18px;
   display: block;
-}
-@keyframes pageFlipNext {
-  0% { opacity: 1; transform: rotateY(0deg) translateX(0) scale(1); }
-  55% { opacity: 1; transform: rotateY(-68deg) translateX(-8px) scale(0.99); box-shadow: -18px 20px 44px rgba(55, 37, 18, 0.22); }
-  100% { opacity: 0; transform: rotateY(-112deg) translateX(-26px) scale(0.97); }
-}
-@keyframes pageFlipPrev {
-  0% { opacity: 1; transform: rotateY(0deg) translateX(0) scale(1); }
-  55% { opacity: 1; transform: rotateY(68deg) translateX(8px) scale(0.99); box-shadow: 18px 20px 44px rgba(55, 37, 18, 0.22); }
-  100% { opacity: 0; transform: rotateY(112deg) translateX(26px) scale(0.97); }
-}
-@keyframes pageSettle {
-  0% { opacity: 0.72; transform: rotateY(3deg) scale(0.985); }
-  100% { opacity: 1; transform: rotateY(0deg) scale(1); }
+  filter: drop-shadow(0 12px 16px rgba(15, 23, 42, 0.14));
 }
 .carousel-btn {
   position: absolute;
-  z-index: 5;
+  z-index: 9;
+  top: 50%;
+  transform: translateY(-50%);
   width: 42px;
   height: 42px;
   border: 1px solid rgba(15, 23, 42, 0.12);
@@ -433,21 +411,6 @@ body {
   transform: rotateY(0deg) translateX(0) scale(1);
   z-index: 2;
 }
-.info-page.incoming {
-  z-index: 1;
-  animation: pageSettle 0.72s ease both;
-}
-.info-page.turning {
-  z-index: 3;
-}
-.info-page.turning.turn-next {
-  transform-origin: left center;
-  animation: pageFlipNext 0.72s cubic-bezier(0.2, 0.72, 0.2, 1) forwards;
-}
-.info-page.turning.turn-prev {
-  transform-origin: right center;
-  animation: pageFlipPrev 0.72s cubic-bezier(0.2, 0.72, 0.2, 1) forwards;
-}
 .info-page-inner {
   position: relative;
   z-index: 1;
@@ -501,6 +464,154 @@ body {
   color: var(--ink-soft);
   font-size: 12px;
   text-align: right;
+}
+.turn-sheet {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 50%;
+  z-index: 7;
+  background: transparent;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  transform-origin: left center;
+  will-change: transform;
+}
+.turn-sheet[hidden] { display: none; }
+.turn-sheet.is-turning.turn-next {
+  animation: leafTurnNext 0.78s cubic-bezier(0.34, 0.02, 0.28, 1) forwards;
+}
+.turn-sheet.is-turning.turn-prev {
+  animation: leafTurnPrev 0.78s cubic-bezier(0.34, 0.02, 0.28, 1) forwards;
+}
+
+/* The leaf has two physical faces. backface-visibility hides whichever points
+   away from the camera, so the front (page content) and the back (paper)
+   swap over exactly at 90deg — no blank gap, no "cut in half". */
+.turn-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+.turn-face-front {
+  transform: rotateY(0deg);
+}
+.turn-face-back {
+  transform: rotateY(180deg);
+  background:
+    linear-gradient(270deg, rgba(96, 67, 32, 0.18), transparent 26%),
+    repeating-linear-gradient(0deg, rgba(120, 82, 35, 0.03) 0 3px, transparent 3px 6px),
+    #fbf3e2;
+  box-shadow: inset 0 0 60px rgba(120, 82, 35, 0.12);
+}
+.turn-face-back::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 16px;
+  border: 1px solid rgba(120, 82, 35, 0.14);
+  border-radius: 8px;
+}
+
+/* Travelling shade: peaks while the leaf is edge-on (~90deg) and eases off as
+   it lays flat. Driven on both faces so the shadow is continuous through the
+   front→back hand-off. This is the cue that reads as paper, not cardboard. */
+.turn-face::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: linear-gradient(270deg, rgba(38, 24, 8, 0.42), rgba(38, 24, 8, 0.08) 34%, transparent 66%);
+  opacity: 0;
+}
+.turn-sheet.is-turning .turn-face::before {
+  animation: leafShadePulse 0.78s ease-in-out forwards;
+}
+.turn-page-media,
+.turn-page-info {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.turn-page-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 44px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.9), rgba(246, 233, 199, 0.7) 44%, rgba(223, 199, 153, 0.32) 100%);
+  box-shadow: inset -16px 0 28px rgba(96, 67, 32, 0.12);
+}
+.turn-page-info {
+  display: flex;
+  flex-direction: column;
+  padding: 42px 42px 38px 48px;
+  background:
+    linear-gradient(90deg, rgba(96, 67, 32, 0.08), transparent 9%),
+    #fffaf0;
+  box-shadow: inset 16px 0 28px rgba(96, 67, 32, 0.1);
+}
+.turn-page-media::after,
+.turn-page-info::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 16px;
+  border: 1px solid rgba(120, 82, 35, 0.16);
+  border-radius: 8px;
+}
+.turn-image-wrap {
+  position: relative;
+  z-index: 1;
+  width: min(92%, 470px);
+  aspect-ratio: 1 / 1;
+}
+.turn-info-head {
+  position: relative;
+  z-index: 1;
+}
+.turn-info-head h2 {
+  margin: 0 0 6px;
+  font-size: 21px;
+  line-height: 1.3;
+}
+.turn-quote {
+  position: relative;
+  z-index: 1;
+  margin: 6px 0 4px;
+  padding: 14px;
+  background: #f8fbfa;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.turn-quote .precio { font-size: 19px; margin-bottom: 6px; }
+.turn-sheet .info-page {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin-top: 16px;
+}
+/* NEXT: the leaf lifts off the right pane and swings over the spine to the
+   left, revealing the next page underneath. PREV: it swings back from the
+   spine and settles flat, delivering the previous page. Pure rotateY around
+   the spine — no scale/translate, so it never shrinks or slides. */
+@keyframes leafTurnNext {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(-180deg); }
+}
+@keyframes leafTurnPrev {
+  0%   { transform: rotateY(-180deg); }
+  100% { transform: rotateY(0deg); }
+}
+@keyframes leafShadePulse {
+  0%   { opacity: 0; }
+  50%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 .block { margin-top: 18px; }
 .block h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); margin: 0 0 8px; }
@@ -690,27 +801,106 @@ body {
 .btn-pdf { flex: 1; background: var(--brand); color: #fff; border: 0; border-radius: 10px; padding: 12px 16px; font-size: 14px; font-weight: 600; cursor: pointer; }
 .btn-pdf:hover { background: #155e75; }
 
-@media (max-width: 640px) {
+@media (max-width: 980px) {
+  .modal { padding: 12px; }
   .modal-card { max-height: 94vh; }
-  .modal-body { grid-template-columns: 1fr; grid-template-rows: minmax(230px, 38%) minmax(0, 1fr); height: 94vh; min-height: auto; }
+  .modal-body { min-height: min(700px, 92vh); }
+  .modal-media { padding: 44px 34px; }
+  .modal-info { padding: 34px 32px 30px 38px; }
+  .book-carousel { width: min(88%, 390px); }
+  .modal-info h2 { font-size: 19px; }
+  .cotizar-box { padding: 12px; }
+  .cotizar-box .precio { font-size: 18px; }
+  .btn-add { padding: 10px 14px; }
+  .info-book { min-height: 210px; }
+  .info-page { padding: 18px 20px 16px; }
+  .turn-page-media { padding: 44px 34px; }
+  .turn-page-info { padding: 34px 32px 30px 38px; }
+}
+
+@media (max-width: 760px) {
+  .toolbar-inner { padding: 12px 14px; }
+  .container { padding: 18px 14px 46px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+  .modal { padding: 8px; }
+  .modal-card { border-radius: 8px; max-height: 96vh; }
+  .modal-body { grid-template-columns: 1fr; grid-template-rows: minmax(230px, 40%) minmax(0, 1fr); height: 96vh; min-height: auto; }
   .modal-body::before { display: none; }
-  .modal-media { min-height: 0; padding: 44px 28px 24px; box-shadow: inset 0 -14px 26px rgba(96, 67, 32, 0.1); }
-  .modal-info { padding: 22px 22px 20px; box-shadow: inset 0 14px 26px rgba(96, 67, 32, 0.08); }
-  .book-carousel { width: min(68vw, 310px); }
+  .modal-media { min-height: 0; padding: 42px 36px 24px; box-shadow: inset 0 -14px 26px rgba(96, 67, 32, 0.1); }
+  .modal-info { padding: 20px 20px 18px; box-shadow: inset 0 14px 26px rgba(96, 67, 32, 0.08); }
+  .book-carousel { width: min(64vw, 320px); }
   .modal-info h2 { font-size: 18px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .sku { margin-bottom: 10px; }
-  .cotizar-box { padding: 12px; }
-  .cotizar-box .precio { font-size: 17px; }
+  .cotizar-box { padding: 11px; }
+  .cotizar-box .precio { font-size: 16px; }
   .escalas { display: none; }
-  .info-book { min-height: 170px; margin-top: 10px; }
-  .info-page { padding: 16px 18px 14px; }
+  .cotizar-add { gap: 8px; }
+  .qty-stepper button { width: 30px; height: 34px; }
+  .qty-stepper input { width: 42px; height: 34px; }
+  .btn-add { padding: 9px 12px; font-size: 13px; }
+  .line-total { font-size: 12px; }
+  .info-book { min-height: 160px; margin-top: 10px; }
+  .info-page { padding: 15px 16px 13px; }
   .info-block p { -webkit-line-clamp: 3; }
   .info-block ul { max-height: 82px; gap: 3px; }
   .info-block p,
   .info-block li { font-size: 13px; line-height: 1.35; }
-  .carousel-prev { left: 10px; }
-  .carousel-next { right: 10px; }
+  .turn-sheet { width: 100%; }
+  .turn-sheet.turn-next,
+  .turn-sheet.turn-prev { left: 0; }
+  .turn-page-media { padding: 42px 36px 24px; box-shadow: inset 0 -14px 26px rgba(96, 67, 32, 0.1); }
+  .turn-page-info { padding: 20px 20px 18px; box-shadow: inset 0 14px 26px rgba(96, 67, 32, 0.08); }
+  .turn-image-wrap { width: min(64vw, 320px); }
+  .turn-info-head h2 { font-size: 18px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .turn-quote { padding: 11px; }
+  .turn-quote .precio { font-size: 16px; }
+  .turn-quote .escalas { display: none; }
+  .turn-sheet .info-page { margin-top: 10px; }
+  .carousel-prev { left: 8px; }
+  .carousel-next { right: 8px; }
+}
+
+@media (max-width: 640px) {
   .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
   .site-header h1 { font-size: 22px; }
   .cart-panel { width: 100%; }
+}
+
+@media (max-width: 420px) {
+  .header-inner { padding: 34px 14px 28px; }
+  .admin-menu { top: 12px; right: 12px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); }
+  .card-body { padding: 10px 11px 13px; }
+  .modal { padding: 6px; }
+  .modal-card { max-height: calc(100svh - 24px); }
+  .modal-body { height: calc(100svh - 28px); grid-template-rows: minmax(170px, 32%) minmax(0, 1fr); }
+  .modal-media { padding: 34px 28px 16px; }
+  .book-carousel { width: min(58vw, 245px); }
+  .modal-info { padding: 14px 16px 14px; }
+  .badges { margin-bottom: 8px; }
+  .badge { font-size: 10px; padding: 4px 8px; }
+  .modal-info h2 { font-size: 16px; line-height: 1.2; margin-bottom: 4px; }
+  .sku { font-size: 12px; margin-bottom: 8px; }
+  .cotizar-box { padding: 10px; }
+  .cotizar-box .precio { font-size: 15px; }
+  .cotizar-add { align-items: stretch; }
+  .qty-stepper button { width: 28px; height: 32px; }
+  .qty-stepper input { width: 38px; height: 32px; }
+  .btn-add { flex: 1 1 150px; }
+  .line-total { margin-top: 6px; }
+  .info-book { min-height: 110px; margin-top: 8px; }
+  .info-page { padding: 12px 14px 10px; }
+  .info-eyebrow { font-size: 10px; }
+  .info-block h3 { font-size: 11px; margin-bottom: 4px; }
+  .info-block p,
+  .info-block li { font-size: 12px; line-height: 1.28; }
+  .info-block p { -webkit-line-clamp: 2; }
+  .info-block ul { max-height: 54px; gap: 2px; }
+  .carousel-btn { width: 36px; height: 36px; font-size: 24px; }
+  .turn-page-media { padding: 34px 28px 16px; }
+  .turn-page-info { padding: 14px 16px 14px; }
+  .turn-image-wrap { width: min(58vw, 245px); }
+  .turn-info-head h2 { font-size: 16px; line-height: 1.2; margin-bottom: 4px; }
+  .turn-quote { padding: 10px; }
+  .turn-quote .precio { font-size: 15px; }
 }

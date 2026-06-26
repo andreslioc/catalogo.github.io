@@ -56,9 +56,7 @@ for (const product of productsToWrite) {
     precio: precioBase > 0 ? product.precio || "" : "",
     costoLlegada: Math.round(Number(product.costoLlegada) || 0),
     margenSugeridoPct: Number(product.margenSugeridoPct) || 30,
-    imagenesCatalogo: Array.isArray(product.imagenesCatalogo)
-      ? product.imagenesCatalogo.map((url) => String(url || "").trim()).filter(Boolean).slice(0, 3)
-      : [],
+    imagenesCatalogo: [],
   }, { merge: true });
   updated++;
   batchSize++;
