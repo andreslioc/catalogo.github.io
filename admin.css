@@ -9,6 +9,10 @@
   z-index: 200;
   padding: 20px;
 }
+.login-screen[hidden],
+#app[hidden] {
+  display: none !important;
+}
 .login-card {
   background: #fff;
   border-radius: 16px;

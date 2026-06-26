@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Editar Catálogo · Admin</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="admin.css" />
+  <link rel="stylesheet" href="admin.css?v=20260625-4" />
 </head>
 <body class="admin">
   <div id="login" class="login-screen">
@@ -14,6 +14,14 @@
       <p>Un momento mientras confirmamos tu sesión de administrador.</p>
     </div>
   </div>
+  <script>
+    window.__adminBootTimer = setTimeout(function () {
+      var app = document.getElementById("app");
+      if (!app || app.hidden) {
+        window.location.replace("index.html?admin=1&error=timeout");
+      }
+    }, 8000);
+  </script>
 
   <!-- Panel admin -->
   <div id="app" hidden>
@@ -166,6 +174,6 @@
 
   <datalist id="cat-list"></datalist>
 
-  <script type="module" src="admin.js"></script>
+  <script type="module" src="admin.js?v=20260625-4"></script>
 </body>
 </html>

@@ -2,7 +2,7 @@ import {
   db, auth, COLLECTION,
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signOut, onAuthStateChanged, getIdTokenResult,
-} from "./firebase-config.js";
+} from "./firebase-config.js?v=20260625-4";
 import {
   DEFAULT_MARGIN_PCT,
   DEFAULT_WHOLESALE_RULES,
@@ -27,6 +27,8 @@ const state = {
 };
 const els = {};
 let authResolved = false;
+const ADMIN_ENTRY_KEY = "catalogAdminEntry";
+const ADMIN_ENTRY_MAX_MS = 10 * 60 * 1000;
 
 function redirectToLogin(reason = "") {
   const suffix = reason ? `&error=${encodeURIComponent(reason)}` : "";
@@ -40,36 +42,62 @@ function withTimeout(promise, ms, message) {
   ]);
 }
 
+function hasFreshAdminEntry() {
+  try {
+    const raw = sessionStorage.getItem(ADMIN_ENTRY_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    return Date.now() - Number(data?.at || 0) < ADMIN_ENTRY_MAX_MS;
+  } catch {
+    return false;
+  }
+}
+
+function showEditor() {
+  document.getElementById("login").hidden = true;
+  document.getElementById("app").hidden = false;
+  if (window.__adminBootTimer) clearTimeout(window.__adminBootTimer);
+  startApp();
+}
+
 function initAuth() {
+  const hasEntry = hasFreshAdminEntry();
+
+  if (hasEntry) {
+    showEditor();
+  }
+
   setTimeout(() => {
-    if (!authResolved) redirectToLogin("timeout");
+    if (!authResolved && !hasFreshAdminEntry()) redirectToLogin("timeout");
   }, 5000);
 
   onAuthStateChanged(auth, async (user) => {
     authResolved = true;
-    const login = document.getElementById("login");
-    const app = document.getElementById("app");
     if (!user) {
-      redirectToLogin();
+      if (!hasFreshAdminEntry()) redirectToLogin();
       return;
     }
 
-    login.hidden = false;
-    app.hidden = true;
+    if (!hasFreshAdminEntry()) {
+      document.getElementById("login").hidden = false;
+      document.getElementById("app").hidden = true;
+    }
 
     try {
       const token = await withTimeout(getIdTokenResult(user, true), 6000, "token-timeout");
       if (token.claims.admin !== true) {
+        sessionStorage.removeItem(ADMIN_ENTRY_KEY);
         await signOut(auth);
         redirectToLogin("not-admin");
         return;
       }
-      login.hidden = true;
-      app.hidden = false;
-      startApp();
+      sessionStorage.setItem(ADMIN_ENTRY_KEY, JSON.stringify({ at: Date.now(), email: user.email || "" }));
+      showEditor();
     } catch (err) {
-      await signOut(auth);
-      redirectToLogin("timeout");
+      if (!hasFreshAdminEntry()) {
+        await signOut(auth);
+        redirectToLogin("timeout");
+      }
     }
   });
 }

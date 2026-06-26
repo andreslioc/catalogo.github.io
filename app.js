@@ -2,7 +2,7 @@ import {
   db, auth, COLLECTION,
   collection, getDocs, getDoc, doc, query, orderBy,
   signInWithEmailAndPassword, getIdTokenResult, signOut, setPersistence, browserLocalPersistence,
-} from "./firebase-config.js";
+} from "./firebase-config.js?v=20260625-4";
 import { DEFAULT_WHOLESALE_RULES, precioUnitario, tienePrecio, money, normalizeWholesaleRules, quoteTotals } from "./pricing.js";
 
 const CART_KEY = "catalogo_cart_v1";
@@ -160,7 +160,14 @@ function bindEvents() {
 
 function openAdminLogin() {
   if (auth.currentUser) {
-    window.location.href = "admin.html";
+    enterAdminWithUser(auth.currentUser).catch(() => {
+      signOut(auth).finally(() => {
+        els.adminError.textContent = "No se pudo confirmar la sesión. Vuelve a ingresar.";
+        els.adminError.hidden = false;
+        els.adminLogin.hidden = false;
+        document.body.style.overflow = "hidden";
+      });
+    });
     return;
   }
   els.adminError.hidden = true;
@@ -184,12 +191,7 @@ async function handleAdminLogin(e) {
   try {
     await setPersistence(auth, browserLocalPersistence);
     const credential = await signInWithEmailAndPassword(auth, els.adminUser.value.trim(), els.adminPass.value);
-    const token = await getIdTokenResult(credential.user, true);
-    if (token.claims.admin !== true) {
-      await signOut(auth);
-      throw Object.assign(new Error("not-admin"), { code: "auth/not-admin" });
-    }
-    window.location.href = "admin.html";
+    await enterAdminWithUser(credential.user);
   } catch (err) {
     const messages = {
       "auth/invalid-credential": "Usuario o contraseña incorrectos.",
@@ -205,6 +207,23 @@ async function handleAdminLogin(e) {
   } finally {
     els.adminSubmit.disabled = false;
   }
+}
+
+function adminUrl() {
+  return `admin.html?v=${Date.now()}`;
+}
+
+async function enterAdminWithUser(user) {
+  const token = await getIdTokenResult(user, true);
+  if (token.claims.admin !== true) {
+    await signOut(auth);
+    throw Object.assign(new Error("not-admin"), { code: "auth/not-admin" });
+  }
+  sessionStorage.setItem("catalogAdminEntry", JSON.stringify({
+    at: Date.now(),
+    email: user.email || els.adminUser.value.trim(),
+  }));
+  window.location.href = adminUrl();
 }
 
 function applyFilters() {
