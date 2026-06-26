@@ -6,6 +6,7 @@ import os
 import re
 import textwrap
 import urllib.request
+from collections import deque
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
@@ -13,11 +14,11 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 CANVAS = 1200
 PALETTES = [
-    ("#0f766e", "#f97316", "#fef3c7"),
-    ("#1d4ed8", "#e11d48", "#ecfeff"),
-    ("#7c3aed", "#14b8a6", "#fff7ed"),
-    ("#166534", "#ca8a04", "#f0fdfa"),
-    ("#be123c", "#0369a1", "#f8fafc"),
+    ("#0f766e", "#f97316", "#fff7ed", "#0b1220"),
+    ("#1d4ed8", "#e11d48", "#eef2ff", "#111827"),
+    ("#7c3aed", "#14b8a6", "#f5f3ff", "#171717"),
+    ("#166534", "#ca8a04", "#ecfdf5", "#102018"),
+    ("#be123c", "#0369a1", "#fff1f2", "#1f1020"),
 ]
 
 
@@ -53,19 +54,106 @@ def fetch_image(url):
         return Image.open(io.BytesIO(response.read())).convert("RGBA")
 
 
-def trim_product(img):
-    img = ImageOps.exif_transpose(img).convert("RGBA")
-    alpha = img.getchannel("A")
-    bbox = alpha.getbbox()
-    if bbox:
-        img = img.crop(bbox)
+def is_background_pixel(pixel, corner):
+    r, g, b, a = pixel
+    if a < 12:
+        return True
+    avg = (r + g + b) / 3
+    spread = max(r, g, b) - min(r, g, b)
+    dist = sum((pixel[i] - corner[i]) ** 2 for i in range(3)) ** 0.5
+    return (
+        (avg > 238 and spread < 38)
+        or (avg > 220 and spread < 18)
+        or (avg > 190 and dist < 44)
+    )
 
-    bg = Image.new("RGBA", img.size, img.getpixel((0, 0)))
-    diff = ImageChops.difference(img, bg)
-    diff = ImageChops.add(diff, diff, 2.0, -18)
-    bbox = diff.getbbox()
-    if bbox:
-        img = img.crop(bbox)
+
+def remove_connected_background(img):
+    img = ImageOps.exif_transpose(img).convert("RGBA")
+    w, h = img.size
+    px = img.load()
+    corners = [px[0, 0], px[w - 1, 0], px[0, h - 1], px[w - 1, h - 1]]
+    corner = tuple(round(sum(c[i] for c in corners) / len(corners)) for i in range(4))
+    bg = Image.new("L", (w, h), 0)
+    bg_px = bg.load()
+    seen = bytearray(w * h)
+    q = deque()
+
+    for x in range(w):
+        q.append((x, 0))
+        q.append((x, h - 1))
+    for y in range(h):
+        q.append((0, y))
+        q.append((w - 1, y))
+
+    while q:
+        x, y = q.popleft()
+        if x < 0 or y < 0 or x >= w or y >= h:
+            continue
+        idx = y * w + x
+        if seen[idx]:
+            continue
+        seen[idx] = 1
+        if not is_background_pixel(px[x, y], corner):
+            continue
+        bg_px[x, y] = 255
+        q.append((x + 1, y))
+        q.append((x - 1, y))
+        q.append((x, y + 1))
+        q.append((x, y - 1))
+
+    bg = bg.filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.GaussianBlur(1.2))
+    alpha = img.getchannel("A")
+    alpha = ImageChops.subtract(alpha, bg)
+    alpha = alpha.point(lambda p: 0 if p < 40 else 255)
+    img.putalpha(alpha)
+    bbox = alpha.getbbox()
+    return img.crop(bbox) if bbox else img
+
+
+def opaque_ratio(img):
+    hist = img.getchannel("A").histogram()
+    total = sum(hist) or 1
+    return sum(hist[245:]) / total
+
+
+def tight_foreground_crop(img):
+    img = ImageOps.exif_transpose(img).convert("RGBA")
+    w, h = img.size
+    px = img.load()
+    corner = px[0, 0]
+    xs = []
+    ys = []
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a < 12:
+                continue
+            avg = (r + g + b) / 3
+            spread = max(r, g, b) - min(r, g, b)
+            dist = sum((px[x, y][i] - corner[i]) ** 2 for i in range(3)) ** 0.5
+            if not (avg > 248 and spread < 14 and dist < 22):
+                xs.append(x)
+                ys.append(y)
+    if not xs or not ys:
+        return img
+    pad = 24
+    box = (
+        max(0, min(xs) - pad),
+        max(0, min(ys) - pad),
+        min(w, max(xs) + pad),
+        min(h, max(ys) + pad),
+    )
+    cropped = img.crop(box)
+    cropped.putalpha(Image.new("L", cropped.size, 255))
+    return cropped
+
+
+def trim_product(img):
+    original = ImageOps.exif_transpose(img).convert("RGBA")
+    img = remove_connected_background(original)
+    if opaque_ratio(img) < 0.5:
+        img = tight_foreground_crop(original)
 
     img.thumbnail((720, 720), Image.Resampling.LANCZOS)
     layer = Image.new("RGBA", (720, 720), (255, 255, 255, 0))
@@ -87,12 +175,46 @@ def gradient(size, left, right):
     return img.convert("RGBA")
 
 
+def vertical_gradient(size, top, bottom):
+    w, h = size
+    top_rgb = hex_rgb(top)
+    bottom_rgb = hex_rgb(bottom)
+    img = Image.new("RGB", size)
+    px = img.load()
+    for y in range(h):
+        t = y / max(1, h - 1)
+        col = tuple(round(top_rgb[i] * (1 - t) + bottom_rgb[i] * t) for i in range(3))
+        for x in range(w):
+            px[x, y] = col
+    return img.convert("RGBA")
+
+
 def add_shadow(base, layer, pos, blur=28, offset=(0, 24), opacity=90):
     shadow = Image.new("RGBA", layer.size, (0, 0, 0, 0))
     alpha = layer.getchannel("A").filter(ImageFilter.GaussianBlur(blur))
     shadow.putalpha(alpha.point(lambda p: min(opacity, p)))
     base.alpha_composite(shadow, (pos[0] + offset[0], pos[1] + offset[1]))
     base.alpha_composite(layer, pos)
+
+
+def add_soft_product(base, layer, box, shadow=True, glow_color=(255, 255, 255)):
+    product = ImageOps.contain(layer, box, Image.Resampling.LANCZOS)
+    x = (CANVAS - product.width) // 2
+    y = 250 + (box[1] - product.height) // 2
+    if shadow:
+        glow = Image.new("RGBA", product.size, (*glow_color, 0))
+        glow.putalpha(product.getchannel("A").filter(ImageFilter.GaussianBlur(18)).point(lambda p: min(135, p)))
+        base.alpha_composite(glow, (x, y))
+        add_shadow(base, product, (x, y), blur=34, offset=(0, 30), opacity=82)
+    else:
+        base.alpha_composite(product, (x, y))
+    return (x, y, product.width, product.height)
+
+
+def draw_sparkles(draw, color):
+    for x, y, r in [(165, 260, 9), (1015, 260, 7), (1010, 940, 10), (210, 940, 6), (905, 165, 5)]:
+        draw.line((x - r, y, x + r, y), fill=color, width=3)
+        draw.line((x, y - r, x, y + r), fill=color, width=3)
 
 
 def split_to_width(draw, text, max_width, fnt, max_lines):
@@ -145,29 +267,31 @@ def pill(draw, box, label, fill, outline, text_fill, size=30):
 
 
 def premium(product, prod, colors):
-    brand, accent, soft = colors
-    img = gradient((CANVAS, CANVAS), soft, "#ffffff")
+    brand, accent, soft, dark = colors
+    img = vertical_gradient((CANVAS, CANVAS), dark, brand)
     draw = ImageDraw.Draw(img)
-    draw.ellipse((720, -40, 1220, 460), fill=(*hex_rgb(brand), 28))
-    draw.ellipse((-130, 760, 410, 1300), fill=(*hex_rgb(accent), 34))
-    draw.ellipse((230, 170, 970, 900), fill=(*hex_rgb(accent), 30))
-    rounded_border(draw, (92, 84, 1108, 1116), 42, hex_rgb(brand), 7)
-    draw.text((110, 154), "CATALOGO PREMIUM", font=font(28, True), fill=hex_rgb(brand))
-    add_shadow(img, prod, (240, 215))
-    title_end = draw_wrapped(draw, product.get("nombre") or product.get("sku"), (600, 930), 720, 3, 40, "#111827", True, "ma", 6)
-    draw.text((600, min(1088, title_end + 18)), str(product.get("marca") or product.get("sku") or ""), font=font(28, True), fill=hex_rgb(accent), anchor="ma")
+    draw.ellipse((120, 115, 1080, 1075), fill=(*hex_rgb(accent), 58))
+    draw.ellipse((255, 225, 945, 915), fill=(*hex_rgb(brand), 68))
+    draw.rounded_rectangle((92, 82, 1108, 1118), radius=46, outline=(255, 255, 255, 92), width=4)
+    draw.rounded_rectangle((136, 128, 1064, 1072), radius=38, outline=(*hex_rgb(accent), 190), width=4)
+    draw_sparkles(draw, (255, 255, 255, 170))
+    add_soft_product(img, prod, (710, 680), glow_color=hex_rgb(accent))
+    draw.rounded_rectangle((220, 858, 980, 1038), radius=26, fill=(255, 255, 255, 232))
+    title_end = draw_wrapped(draw, product.get("nombre") or product.get("sku"), (600, 920), 680, 2, 38, "#111827", True, "ma", 6)
+    draw.text((600, min(1010, title_end + 12)), str(product.get("marca") or product.get("sku") or ""), font=font(27, True), fill=hex_rgb(brand), anchor="ma")
+    draw.text((600, 174), "PORTADA PREMIUM", font=font(30, True), fill="#ffffff", anchor="ma")
     return img
 
 
 def benefits(product, prod, colors):
-    brand, accent, soft = colors
-    img = Image.new("RGBA", (CANVAS, CANVAS), "#ffffff")
+    brand, accent, soft, dark = colors
+    img = gradient((CANVAS, CANVAS), "#ffffff", soft)
     draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 510, CANVAS), fill=soft)
-    draw.pieslice((-180, 260, 660, 1120), 270, 90, fill=(*hex_rgb(brand), 32))
-    draw.ellipse((15, 40, 375, 400), fill=(*hex_rgb(accent), 28))
-    small = ImageOps.contain(prod, (500, 650), Image.Resampling.LANCZOS)
-    add_shadow(img, small, (40 + (500 - small.width) // 2, 285 + (650 - small.height) // 2), blur=22, offset=(0, 18), opacity=70)
+    draw.rounded_rectangle((54, 70, 1134, 1134), radius=44, fill=(255, 255, 255, 232), outline=(*hex_rgb(brand), 120), width=4)
+    draw.ellipse((-130, 120, 620, 870), fill=(*hex_rgb(brand), 42))
+    draw.ellipse((70, 250, 545, 725), fill=(*hex_rgb(accent), 58))
+    small = ImageOps.contain(prod, (470, 620), Image.Resampling.LANCZOS)
+    add_shadow(img, small, (88 + (470 - small.width) // 2, 322 + (620 - small.height) // 2), blur=24, offset=(0, 22), opacity=72)
     draw.text((620, 180), "BENEFICIOS CLAVE", font=font(34, True), fill=hex_rgb(brand))
     draw_wrapped(draw, product.get("nombre") or product.get("sku"), (620, 245), 500, 2, 40, "#111827", True, "la", 4)
     benefits_list = product.get("beneficios") if isinstance(product.get("beneficios"), list) else []
@@ -182,11 +306,12 @@ def benefits(product, prod, colors):
 
 
 def trust(product, prod, colors):
-    brand, accent, soft = colors
-    img = gradient((CANVAS, CANVAS), "#ffffff", soft)
+    brand, accent, soft, dark = colors
+    img = vertical_gradient((CANVAS, CANVAS), "#ffffff", soft)
     draw = ImageDraw.Draw(img)
-    rounded_border(draw, (78, 78, 1122, 1122), 46, hex_rgb(brand), 7)
-    draw.ellipse((790, 65, 1120, 395), fill=(*hex_rgb(accent), 32))
+    rounded_border(draw, (78, 78, 1122, 1122), 46, hex_rgb(brand), 6)
+    draw.ellipse((790, 65, 1120, 395), fill=(*hex_rgb(accent), 40))
+    draw.ellipse((160, 345, 1040, 710), fill=(255, 255, 255, 180))
     draw.text((600, 150), "CONFIANZA Y ORIGEN", font=font(35, True), fill=hex_rgb(brand), anchor="ma")
     draw_wrapped(draw, product.get("nombre") or product.get("sku"), (600, 225), 720, 2, 40, "#111827", True, "ma", 6)
     small = ImageOps.contain(prod, (500, 430), Image.Resampling.LANCZOS)

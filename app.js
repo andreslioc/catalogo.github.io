@@ -17,6 +17,9 @@ const state = {
   current: null,        // producto abierto en el modal
   currentImages: [],
   currentImageIdx: 0,
+  currentPrevImageIdx: null,
+  currentTurnDirection: 1,
+  currentTurnTimer: null,
   wholesaleRules: DEFAULT_WHOLESALE_RULES,
   cart: loadCart(),     // { [sku]: cantidad }
 };
@@ -40,6 +43,7 @@ const els = {
   cartDiscountLabel: document.getElementById("cart-discount-label"),
   cartDiscount: document.getElementById("cart-discount"),
   cartTotal: document.getElementById("cart-total"),
+  infoBook: document.getElementById("m-info-book"),
   adminMenu: document.getElementById("admin-menu"),
   adminLogin: document.getElementById("admin-login"),
   adminForm: document.getElementById("admin-login-form"),
@@ -285,6 +289,9 @@ function openModal(p) {
   state.current = p;
   state.currentImages = productImages(p);
   state.currentImageIdx = 0;
+  state.currentPrevImageIdx = null;
+  if (state.currentTurnTimer) clearTimeout(state.currentTurnTimer);
+  state.currentTurnTimer = null;
   renderCarousel();
   setText("m-name", p.nombre || p.sku);
   setText("m-sku", "SKU: " + p.sku);
@@ -307,13 +314,7 @@ function openModal(p) {
     precioEl.style.display = "none";
   }
 
-  toggleBlock("m-pres-wrap", "m-pres", p.presentacion, "text");
-  toggleBlock("m-desc-wrap", "m-desc", p.descripcion, "text");
-  toggleBlock("m-benef-wrap", "m-benef", p.beneficios, "list");
-  toggleBlock("m-ingr-wrap", "m-ingr", p.ingredientes, "list");
-  toggleBlock("m-dosis-wrap", "m-dosis", p.dosis, "text");
-  toggleBlock("m-modo-wrap", "m-modo", p.modoUso, "text");
-  toggleBlock("m-adv-wrap", "m-adv", p.advertencias, "text");
+  renderInfoBook();
 
   els.modal.hidden = false;
   document.body.style.overflow = "hidden";
@@ -324,26 +325,135 @@ function productImages(p) {
   return [...imgs, p.imagen].map((url) => String(url || "").trim()).filter(Boolean).slice(0, 3);
 }
 
+function modalPageCount() {
+  return Math.max(state.currentImages.length || 1, productInfoPages(state.current).length || 1);
+}
+
 function renderCarousel() {
   const wrap = document.getElementById("m-carousel");
   const prev = document.getElementById("m-img-prev");
   const next = document.getElementById("m-img-next");
   const images = state.currentImages.length ? state.currentImages : [""];
-  const idx = Math.min(Math.max(state.currentImageIdx, 0), images.length - 1);
-  wrap.innerHTML = images.map((url, i) => `
-    <figure class="book-page ${i === idx ? "active" : ""} ${i < idx ? "past" : ""}">
+  const total = modalPageCount();
+  const idx = state.currentImageIdx % images.length;
+  const turning = state.currentPrevImageIdx !== null;
+  const directionClass = state.currentTurnDirection > 0 ? "turn-next" : "turn-prev";
+  const prevIdx = state.currentPrevImageIdx === null ? idx : state.currentPrevImageIdx % images.length;
+  const pages = turning
+    ? [
+        { url: images[idx], index: idx, cls: `active incoming ${directionClass}` },
+        { url: images[prevIdx], index: prevIdx, cls: `active turning ${directionClass}` },
+      ]
+    : [{ url: images[idx], index: idx, cls: "active" }];
+
+  wrap.innerHTML = pages.map(({ url, index, cls }) => `
+    <figure class="book-page ${cls}" aria-label="Imagen ${index + 1} de ${images.length}">
       ${url ? `<img src="${escapeAttr(url)}" alt="${escapeAttr(state.current?.nombre || "")}" loading="lazy" />` : '<span class="ph">Sin imagen</span>'}
     </figure>
   `).join("");
-  prev.style.display = images.length > 1 ? "" : "none";
-  next.style.display = images.length > 1 ? "" : "none";
+  wrap.dataset.page = `${state.currentImageIdx + 1} / ${total}`;
+  prev.style.display = total > 1 ? "" : "none";
+  next.style.display = total > 1 ? "" : "none";
+  renderInfoBook();
 }
 
 function stepCarousel(delta) {
-  const total = state.currentImages.length;
+  const total = modalPageCount();
   if (total <= 1) return;
+  if (state.currentTurnTimer) clearTimeout(state.currentTurnTimer);
+  state.currentPrevImageIdx = state.currentImageIdx;
+  state.currentTurnDirection = delta >= 0 ? 1 : -1;
   state.currentImageIdx = (state.currentImageIdx + delta + total) % total;
   renderCarousel();
+  state.currentTurnTimer = setTimeout(() => {
+    state.currentPrevImageIdx = null;
+    state.currentTurnTimer = null;
+    renderCarousel();
+  }, 720);
+}
+
+function productInfoPages(p) {
+  if (!p) return [];
+  const pages = [
+    {
+      eyebrow: "Resumen",
+      blocks: [
+        infoBlock("Presentación", p.presentacion, "text"),
+        infoBlock("Descripción", p.descripcion, "text"),
+      ],
+    },
+    {
+      eyebrow: "Beneficios",
+      blocks: [
+        infoBlock("Beneficios clave", p.beneficios, "list"),
+        infoBlock("Ingredientes", p.ingredientes, "list"),
+      ],
+    },
+    {
+      eyebrow: "Uso y compra",
+      blocks: [
+        infoBlock("Dosis", p.dosis, "text"),
+        infoBlock("Modo de uso", p.modoUso, "text"),
+        infoBlock("Advertencias", p.advertencias, "text"),
+        infoBlock("Condiciones", [
+          "Producto sujeto a disponibilidad de unidades.",
+          "El precio del transporte corre por cuenta del comprador.",
+        ], "list"),
+      ],
+    },
+  ].map((page) => ({ ...page, blocks: page.blocks.filter(Boolean) }));
+
+  const filled = pages.filter((page) => page.blocks.length > 0);
+  return filled.length ? filled : [{
+    eyebrow: "Producto",
+    blocks: [infoBlock("Información", "Consulta disponibilidad y condiciones con el asesor.", "text")],
+  }];
+}
+
+function infoBlock(title, value, kind) {
+  const has = kind === "list"
+    ? Array.isArray(value) && value.some((item) => String(item || "").trim())
+    : !!String(value || "").trim();
+  if (!has) return null;
+  return { title, value, kind };
+}
+
+function renderInfoBook() {
+  if (!els.infoBook || !state.current) return;
+  const pages = productInfoPages(state.current);
+  const total = modalPageCount();
+  const idx = state.currentImageIdx % pages.length;
+  const turning = state.currentPrevImageIdx !== null;
+  const directionClass = state.currentTurnDirection > 0 ? "turn-next" : "turn-prev";
+  const prevIdx = state.currentPrevImageIdx === null ? idx : state.currentPrevImageIdx % pages.length;
+  const visiblePages = turning
+    ? [
+        { page: pages[idx], index: idx, cls: `active incoming ${directionClass}` },
+        { page: pages[prevIdx], index: prevIdx, cls: `active turning ${directionClass}` },
+      ]
+    : [{ page: pages[idx], index: idx, cls: "active" }];
+
+  els.infoBook.innerHTML = visiblePages.map(({ page, index, cls }) => `
+    <section class="info-page ${cls}" aria-label="Detalle ${state.currentImageIdx + 1} de ${total}">
+      <div class="info-page-inner">
+        <p class="info-eyebrow">${escapeHtml(page.eyebrow)}</p>
+        ${page.blocks.map(renderInfoBlock).join("")}
+      </div>
+      <p class="info-page-count">${state.currentImageIdx + 1} / ${total}</p>
+    </section>
+  `).join("");
+}
+
+function renderInfoBlock(block) {
+  if (block.kind === "list") {
+    const items = block.value
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .map((item) => `<li>${escapeHtml(item)}</li>`)
+      .join("");
+    return `<article class="info-block"><h3>${escapeHtml(block.title)}</h3><ul>${items}</ul></article>`;
+  }
+  return `<article class="info-block"><h3>${escapeHtml(block.title)}</h3><p>${escapeHtml(block.value)}</p></article>`;
 }
 
 function renderEscalas(p) {
@@ -389,6 +499,9 @@ function addCurrentToCart() {
 }
 
 function closeModal() {
+  if (state.currentTurnTimer) clearTimeout(state.currentTurnTimer);
+  state.currentTurnTimer = null;
+  state.currentPrevImageIdx = null;
   els.modal.hidden = true;
   document.body.style.overflow = "";
 }

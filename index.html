@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Catálogo de Productos</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20260625-6" />
   <!-- jsPDF (UMD) para descargar la cotización en PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -78,40 +78,7 @@
             <p id="m-line-total" class="line-total"></p>
           </div>
 
-          <div id="m-pres-wrap" class="block">
-            <h3>Presentación</h3>
-            <p id="m-pres"></p>
-          </div>
-
-          <div id="m-desc-wrap" class="block">
-            <h3>Descripción</h3>
-            <p id="m-desc"></p>
-          </div>
-
-          <div id="m-benef-wrap" class="block">
-            <h3>Beneficios</h3>
-            <ul id="m-benef"></ul>
-          </div>
-
-          <div id="m-ingr-wrap" class="block">
-            <h3>Ingredientes</h3>
-            <ul id="m-ingr"></ul>
-          </div>
-
-          <div id="m-dosis-wrap" class="block">
-            <h3>Dosis</h3>
-            <p id="m-dosis"></p>
-          </div>
-
-          <div id="m-modo-wrap" class="block">
-            <h3>Modo de uso</h3>
-            <p id="m-modo"></p>
-          </div>
-
-          <div id="m-adv-wrap" class="block">
-            <h3>Advertencias</h3>
-            <p id="m-adv"></p>
-          </div>
+          <div id="m-info-book" class="info-book" aria-live="polite"></div>
         </div>
       </div>
     </div>
@@ -175,6 +142,6 @@
     <p>Catálogo · <span id="footer-count"></span> productos</p>
   </footer>
 
-  <script type="module" src="app.js?v=20260625-4"></script>
+  <script type="module" src="app.js?v=20260625-6"></script>
 </body>
 </html>
