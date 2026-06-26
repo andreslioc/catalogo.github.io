@@ -1,4 +1,8 @@
-import { db, COLLECTION, collection, getDocs, getDoc, doc, query, orderBy } from "./firebase-config.js";
+import {
+  db, auth, COLLECTION,
+  collection, getDocs, getDoc, doc, query, orderBy,
+  signInWithEmailAndPassword, getIdTokenResult, signOut, setPersistence, browserLocalPersistence,
+} from "./firebase-config.js";
 import { DEFAULT_WHOLESALE_RULES, precioUnitario, tienePrecio, money, normalizeWholesaleRules, quoteTotals } from "./pricing.js";
 
 const CART_KEY = "catalogo_cart_v1";
@@ -36,6 +40,13 @@ const els = {
   cartDiscountLabel: document.getElementById("cart-discount-label"),
   cartDiscount: document.getElementById("cart-discount"),
   cartTotal: document.getElementById("cart-total"),
+  adminMenu: document.getElementById("admin-menu"),
+  adminLogin: document.getElementById("admin-login"),
+  adminForm: document.getElementById("admin-login-form"),
+  adminUser: document.getElementById("admin-user"),
+  adminPass: document.getElementById("admin-pass"),
+  adminError: document.getElementById("admin-login-error"),
+  adminSubmit: document.getElementById("admin-login-submit"),
 };
 
 init();
@@ -61,9 +72,25 @@ async function init() {
   await loadPricingConfig();
   buildCategoryChips();
   bindEvents();
+  openAdminLoginFromQuery();
   applyFilters();
   els.footerCount.textContent = state.all.length;
   renderCart();
+}
+
+function openAdminLoginFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("admin") !== "1") return;
+  openAdminLogin();
+  const error = params.get("error");
+  if (error === "not-admin") {
+    els.adminError.textContent = "Este usuario no tiene permisos de administrador.";
+    els.adminError.hidden = false;
+  } else if (error === "timeout") {
+    els.adminError.textContent = "No se pudo confirmar la sesión. Vuelve a ingresar.";
+    els.adminError.hidden = false;
+  }
+  window.history.replaceState({}, "", window.location.pathname);
 }
 
 async function loadPricingConfig() {
@@ -105,7 +132,7 @@ function bindEvents() {
     if (e.target.hasAttribute("data-close")) closeModal();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { closeModal(); closeCart(); }
+    if (e.key === "Escape") { closeModal(); closeCart(); closeAdminLogin(); }
   });
 
   // Cotizador dentro del modal
@@ -123,6 +150,61 @@ function bindEvents() {
   });
   document.getElementById("cart-clear").addEventListener("click", clearCart);
   document.getElementById("cart-pdf").addEventListener("click", downloadPDF);
+
+  els.adminMenu.addEventListener("click", openAdminLogin);
+  els.adminLogin.addEventListener("click", (e) => {
+    if (e.target.hasAttribute("data-admin-close")) closeAdminLogin();
+  });
+  els.adminForm.addEventListener("submit", handleAdminLogin);
+}
+
+function openAdminLogin() {
+  if (auth.currentUser) {
+    window.location.href = "admin.html";
+    return;
+  }
+  els.adminError.hidden = true;
+  els.adminError.textContent = "";
+  els.adminPass.value = "";
+  els.adminLogin.hidden = false;
+  document.body.style.overflow = "hidden";
+  setTimeout(() => els.adminUser.focus(), 0);
+}
+
+function closeAdminLogin() {
+  if (els.adminLogin.hidden) return;
+  els.adminLogin.hidden = true;
+  document.body.style.overflow = "";
+}
+
+async function handleAdminLogin(e) {
+  e.preventDefault();
+  els.adminError.hidden = true;
+  els.adminSubmit.disabled = true;
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+    const credential = await signInWithEmailAndPassword(auth, els.adminUser.value.trim(), els.adminPass.value);
+    const token = await getIdTokenResult(credential.user, true);
+    if (token.claims.admin !== true) {
+      await signOut(auth);
+      throw Object.assign(new Error("not-admin"), { code: "auth/not-admin" });
+    }
+    window.location.href = "admin.html";
+  } catch (err) {
+    const messages = {
+      "auth/invalid-credential": "Usuario o contraseña incorrectos.",
+      "auth/invalid-email": "Ingresa un usuario válido.",
+      "auth/user-not-found": "No existe un administrador con ese usuario.",
+      "auth/wrong-password": "Contraseña incorrecta.",
+      "auth/too-many-requests": "Demasiados intentos. Espera un momento.",
+      "auth/not-admin": "Este usuario no tiene permisos de administrador.",
+    };
+    els.adminError.textContent = messages[err?.code] || "No se pudo iniciar sesión.";
+    els.adminError.hidden = false;
+    els.adminPass.select();
+  } finally {
+    els.adminSubmit.disabled = false;
+  }
 }
 
 function applyFilters() {

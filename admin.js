@@ -1,7 +1,7 @@
 import {
   db, auth, COLLECTION,
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
-  signInWithEmailAndPassword, signOut, onAuthStateChanged,
+  signOut, onAuthStateChanged, getIdTokenResult,
 } from "./firebase-config.js";
 import {
   DEFAULT_MARGIN_PCT,
@@ -26,52 +26,50 @@ const state = {
   dirty: false,
 };
 const els = {};
+let authResolved = false;
+
+function redirectToLogin(reason = "") {
+  const suffix = reason ? `&error=${encodeURIComponent(reason)}` : "";
+  window.location.replace(`index.html?admin=1${suffix}`);
+}
+
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
 
 function initAuth() {
-  const form = document.getElementById("login-form");
-  const email = document.getElementById("login-email");
-  const pass = document.getElementById("login-pass");
-  const error = document.getElementById("login-error");
-  const btn = form.querySelector("button");
+  setTimeout(() => {
+    if (!authResolved) redirectToLogin("timeout");
+  }, 5000);
 
-  const showError = (msg) => { error.textContent = msg; error.hidden = false; };
-
-  const tryLogin = async (e) => {
-    if (e) e.preventDefault();
-    error.hidden = true;
-    btn.disabled = true;
-    try {
-      await signInWithEmailAndPassword(auth, email.value.trim(), pass.value);
-    } catch (err) {
-      const map = {
-        "auth/invalid-credential": "Correo o contrasena incorrectos.",
-        "auth/invalid-email": "Correo no valido.",
-        "auth/user-not-found": "No existe una cuenta con ese correo.",
-        "auth/wrong-password": "Contrasena incorrecta.",
-        "auth/too-many-requests": "Demasiados intentos. Espera un momento.",
-      };
-      showError(map[err?.code] || ("No se pudo iniciar sesion: " + (err?.code || err)));
-      pass.select();
-    } finally {
-      btn.disabled = false;
-    }
-  };
-
-  form.addEventListener("submit", tryLogin);
-  btn.addEventListener("click", tryLogin);
-  pass.addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(e); });
-
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
+    authResolved = true;
     const login = document.getElementById("login");
     const app = document.getElementById("app");
-    if (user) {
+    if (!user) {
+      redirectToLogin();
+      return;
+    }
+
+    login.hidden = false;
+    app.hidden = true;
+
+    try {
+      const token = await withTimeout(getIdTokenResult(user, true), 6000, "token-timeout");
+      if (token.claims.admin !== true) {
+        await signOut(auth);
+        redirectToLogin("not-admin");
+        return;
+      }
       login.hidden = true;
       app.hidden = false;
       startApp();
-    } else {
-      app.hidden = true;
-      login.hidden = false;
-      email.focus();
+    } catch (err) {
+      await signOut(auth);
+      redirectToLogin("timeout");
     }
   });
 }

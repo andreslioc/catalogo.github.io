@@ -24,7 +24,12 @@
     "precioBase": 63183,
     "escalasUnidades": [],
     "costoLlegada": 48602,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCar-301-01-premium.webp",
+      "assets/catalog/SalCar-301-02-beneficios.webp",
+      "assets/catalog/SalCar-301-03-confianza.webp"
+    ]
   },
   {
     "sku": "Salpip-412",
@@ -50,7 +55,12 @@
     "precioBase": 38375,
     "escalasUnidades": [],
     "costoLlegada": 29519,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/Salpip-412-01-premium.webp",
+      "assets/catalog/Salpip-412-02-beneficios.webp",
+      "assets/catalog/Salpip-412-03-confianza.webp"
+    ]
   },
   {
     "sku": "Salpip-410",
@@ -76,7 +86,12 @@
     "precioBase": 61118,
     "escalasUnidades": [],
     "costoLlegada": 47014,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/Salpip-410-01-premium.webp",
+      "assets/catalog/Salpip-410-02-beneficios.webp",
+      "assets/catalog/Salpip-410-03-confianza.webp"
+    ]
   },
   {
     "sku": "Salnow-442",
@@ -102,7 +117,12 @@
     "precioBase": 54504,
     "escalasUnidades": [],
     "costoLlegada": 41926,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/Salnow-442-01-premium.webp",
+      "assets/catalog/Salnow-442-02-beneficios.webp",
+      "assets/catalog/Salnow-442-03-confianza.webp"
+    ]
   },
   {
     "sku": "Salnow-405",
@@ -127,7 +147,12 @@
     "precioBase": 47194,
     "escalasUnidades": [],
     "costoLlegada": 36303,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/Salnow-405-01-premium.webp",
+      "assets/catalog/Salnow-405-02-beneficios.webp",
+      "assets/catalog/Salnow-405-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalWho-001",
@@ -153,7 +178,12 @@
     "precioBase": 144414,
     "escalasUnidades": [],
     "costoLlegada": 111088,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalWho-001-01-premium.webp",
+      "assets/catalog/SalWho-001-02-beneficios.webp",
+      "assets/catalog/SalWho-001-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalVit-208",
@@ -181,7 +211,12 @@
     "precioBase": 76122,
     "escalasUnidades": [],
     "costoLlegada": 58555,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalVit-208-01-premium.webp",
+      "assets/catalog/SalVit-208-02-beneficios.webp",
+      "assets/catalog/SalVit-208-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalSpr-389",
@@ -206,7 +241,12 @@
     "precioBase": 56479,
     "escalasUnidades": [],
     "costoLlegada": 43445,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalSpr-389-01-premium.webp",
+      "assets/catalog/SalSpr-389-02-beneficios.webp",
+      "assets/catalog/SalSpr-389-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalSpr-199",
@@ -231,7 +271,12 @@
     "precioBase": 33030,
     "escalasUnidades": [],
     "costoLlegada": 25408,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalSpr-199-01-premium.webp",
+      "assets/catalog/SalSpr-199-02-beneficios.webp",
+      "assets/catalog/SalSpr-199-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalPip-323",
@@ -257,7 +302,12 @@
     "precioBase": 61500,
     "escalasUnidades": [],
     "costoLlegada": 47308,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalPip-323-01-premium.webp",
+      "assets/catalog/SalPip-323-02-beneficios.webp",
+      "assets/catalog/SalPip-323-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalPip-268",
@@ -282,7 +332,12 @@
     "precioBase": 57126,
     "escalasUnidades": [],
     "costoLlegada": 43943,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalPip-268-01-premium.webp",
+      "assets/catalog/SalPip-268-02-beneficios.webp",
+      "assets/catalog/SalPip-268-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalNow-329",
@@ -307,7 +362,12 @@
     "precioBase": 31721,
     "escalasUnidades": [],
     "costoLlegada": 24401,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalNow-329-01-premium.webp",
+      "assets/catalog/SalNow-329-02-beneficios.webp",
+      "assets/catalog/SalNow-329-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalNow-123",
@@ -333,7 +393,12 @@
     "precioBase": 49057,
     "escalasUnidades": [],
     "costoLlegada": 37736,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalNow-123-01-premium.webp",
+      "assets/catalog/SalNow-123-02-beneficios.webp",
+      "assets/catalog/SalNow-123-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalNew-302",
@@ -359,7 +424,12 @@
     "precioBase": 68877,
     "escalasUnidades": [],
     "costoLlegada": 52982,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalNew-302-01-premium.webp",
+      "assets/catalog/SalNew-302-02-beneficios.webp",
+      "assets/catalog/SalNew-302-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalNeo-321",
@@ -385,7 +455,12 @@
     "precioBase": 188505,
     "escalasUnidades": [],
     "costoLlegada": 145004,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalNeo-321-01-premium.webp",
+      "assets/catalog/SalNeo-321-02-beneficios.webp",
+      "assets/catalog/SalNeo-321-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalNat-441",
@@ -411,7 +486,12 @@
     "precioBase": 49843,
     "escalasUnidades": [],
     "costoLlegada": 38341,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalNat-441-01-premium.webp",
+      "assets/catalog/SalNat-441-02-beneficios.webp",
+      "assets/catalog/SalNat-441-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalNat-436",
@@ -437,7 +517,12 @@
     "precioBase": 132869,
     "escalasUnidades": [],
     "costoLlegada": 102207,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalNat-436-01-premium.webp",
+      "assets/catalog/SalNat-436-02-beneficios.webp",
+      "assets/catalog/SalNat-436-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalNat-207",
@@ -463,7 +548,12 @@
     "precioBase": 65978,
     "escalasUnidades": [],
     "costoLlegada": 50752,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalNat-207-01-premium.webp",
+      "assets/catalog/SalNat-207-02-beneficios.webp",
+      "assets/catalog/SalNat-207-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalNOW-333",
@@ -489,7 +579,12 @@
     "precioBase": 71291,
     "escalasUnidades": [],
     "costoLlegada": 54839,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalNOW-333-01-premium.webp",
+      "assets/catalog/SalNOW-333-02-beneficios.webp",
+      "assets/catalog/SalNOW-333-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalLac-001",
@@ -514,7 +609,12 @@
     "precioBase": 84921,
     "escalasUnidades": [],
     "costoLlegada": 65324,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalLac-001-01-premium.webp",
+      "assets/catalog/SalLac-001-02-beneficios.webp",
+      "assets/catalog/SalLac-001-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalEqu-385",
@@ -539,7 +639,12 @@
     "costoLlegada": 26714,
     "margenSugeridoPct": 30,
     "precioBase": 34728,
-    "escalasUnidades": []
+    "escalasUnidades": [],
+    "imagenesCatalogo": [
+      "assets/catalog/SalEqu-385-01-premium.webp",
+      "assets/catalog/SalEqu-385-02-beneficios.webp",
+      "assets/catalog/SalEqu-385-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalKir-84",
@@ -564,7 +669,12 @@
     "costoLlegada": 40723,
     "margenSugeridoPct": 30,
     "precioBase": 52940,
-    "escalasUnidades": []
+    "escalasUnidades": [],
+    "imagenesCatalogo": [
+      "assets/catalog/SalKir-84-01-premium.webp",
+      "assets/catalog/SalKir-84-02-beneficios.webp",
+      "assets/catalog/SalKir-84-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalKir-367",
@@ -589,7 +699,12 @@
     "precioBase": 59280,
     "escalasUnidades": [],
     "costoLlegada": 45600,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalKir-367-01-premium.webp",
+      "assets/catalog/SalKir-367-02-beneficios.webp",
+      "assets/catalog/SalKir-367-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalKir-366",
@@ -615,7 +730,12 @@
     "precioBase": 97088,
     "escalasUnidades": [],
     "costoLlegada": 74683,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalKir-366-01-premium.webp",
+      "assets/catalog/SalKir-366-02-beneficios.webp",
+      "assets/catalog/SalKir-366-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalNOW-319",
@@ -643,7 +763,12 @@
     "precioBase": 126122,
     "escalasUnidades": [],
     "costoLlegada": 97017,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalNOW-319-01-premium.webp",
+      "assets/catalog/SalNOW-319-02-beneficios.webp",
+      "assets/catalog/SalNOW-319-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalKir-125",
@@ -668,7 +793,12 @@
     "precioBase": 75812,
     "escalasUnidades": [],
     "costoLlegada": 58317,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalKir-125-01-premium.webp",
+      "assets/catalog/SalKir-125-02-beneficios.webp",
+      "assets/catalog/SalKir-125-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalHor-405",
@@ -693,7 +823,12 @@
     "precioBase": 84726,
     "escalasUnidades": [],
     "costoLlegada": 65174,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalHor-405-01-premium.webp",
+      "assets/catalog/SalHor-405-02-beneficios.webp",
+      "assets/catalog/SalHor-405-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalHor-396",
@@ -719,7 +854,12 @@
     "precioBase": 62811,
     "escalasUnidades": [],
     "costoLlegada": 48316,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalHor-396-01-premium.webp",
+      "assets/catalog/SalHor-396-02-beneficios.webp",
+      "assets/catalog/SalHor-396-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalHor-337",
@@ -747,7 +887,12 @@
     "precioBase": 57275,
     "escalasUnidades": [],
     "costoLlegada": 44058,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalHor-337-01-premium.webp",
+      "assets/catalog/SalHor-337-02-beneficios.webp",
+      "assets/catalog/SalHor-337-03-confianza.webp"
+    ]
   },
   {
     "sku": "Salhor-403",
@@ -773,7 +918,12 @@
     "precioBase": 60418,
     "escalasUnidades": [],
     "costoLlegada": 46475,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/Salhor-403-01-premium.webp",
+      "assets/catalog/Salhor-403-02-beneficios.webp",
+      "assets/catalog/Salhor-403-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalHor-332",
@@ -798,7 +948,12 @@
     "precioBase": 58822,
     "escalasUnidades": [],
     "costoLlegada": 45248,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalHor-332-01-premium.webp",
+      "assets/catalog/SalHor-332-02-beneficios.webp",
+      "assets/catalog/SalHor-332-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalHor-298",
@@ -823,7 +978,12 @@
     "precioBase": 100802,
     "escalasUnidades": [],
     "costoLlegada": 77540,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalHor-298-01-premium.webp",
+      "assets/catalog/SalHor-298-02-beneficios.webp",
+      "assets/catalog/SalHor-298-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalHor-330",
@@ -850,7 +1010,12 @@
     "precioBase": 59306,
     "escalasUnidades": [],
     "costoLlegada": 45620,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalHor-330-01-premium.webp",
+      "assets/catalog/SalHor-330-02-beneficios.webp",
+      "assets/catalog/SalHor-330-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalHor-328",
@@ -875,7 +1040,12 @@
     "precioBase": 79720,
     "escalasUnidades": [],
     "costoLlegada": 61323,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalHor-328-01-premium.webp",
+      "assets/catalog/SalHor-328-02-beneficios.webp",
+      "assets/catalog/SalHor-328-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalHor-300",
@@ -902,7 +1072,12 @@
     "precioBase": 64258,
     "escalasUnidades": [],
     "costoLlegada": 49429,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalHor-300-01-premium.webp",
+      "assets/catalog/SalHor-300-02-beneficios.webp",
+      "assets/catalog/SalHor-300-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalHor-294",
@@ -928,7 +1103,12 @@
     "precioBase": 58179,
     "escalasUnidades": [],
     "costoLlegada": 44753,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalHor-294-01-premium.webp",
+      "assets/catalog/SalHor-294-02-beneficios.webp",
+      "assets/catalog/SalHor-294-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalHor-200",
@@ -954,7 +1134,12 @@
     "precioBase": 104637,
     "escalasUnidades": [],
     "costoLlegada": 80490,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalHor-200-01-premium.webp",
+      "assets/catalog/SalHor-200-02-beneficios.webp",
+      "assets/catalog/SalHor-200-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalDoc-398",
@@ -982,7 +1167,12 @@
     "precioBase": 59437,
     "escalasUnidades": [],
     "costoLlegada": 45721,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalDoc-398-01-premium.webp",
+      "assets/catalog/SalDoc-398-02-beneficios.webp",
+      "assets/catalog/SalDoc-398-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalDoc-397",
@@ -1009,7 +1199,12 @@
     "precioBase": 62609,
     "escalasUnidades": [],
     "costoLlegada": 48161,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalDoc-397-01-premium.webp",
+      "assets/catalog/SalDoc-397-02-beneficios.webp",
+      "assets/catalog/SalDoc-397-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalDea-195",
@@ -1035,7 +1230,12 @@
     "precioBase": 117741,
     "escalasUnidades": [],
     "costoLlegada": 90570,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalDea-195-01-premium.webp",
+      "assets/catalog/SalDea-195-02-beneficios.webp",
+      "assets/catalog/SalDea-195-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCom-188",
@@ -1061,7 +1261,12 @@
     "precioBase": 96676,
     "escalasUnidades": [],
     "costoLlegada": 74366,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCom-188-01-premium.webp",
+      "assets/catalog/SalCom-188-02-beneficios.webp",
+      "assets/catalog/SalCom-188-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCen-371",
@@ -1088,7 +1293,12 @@
     "precioBase": 68713,
     "escalasUnidades": [],
     "costoLlegada": 52856,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCen-371-01-premium.webp",
+      "assets/catalog/SalCen-371-02-beneficios.webp",
+      "assets/catalog/SalCen-371-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCen-370",
@@ -1115,7 +1325,12 @@
     "precioBase": 77159,
     "escalasUnidades": [],
     "costoLlegada": 59353,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCen-370-01-premium.webp",
+      "assets/catalog/SalCen-370-02-beneficios.webp",
+      "assets/catalog/SalCen-370-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCen-369",
@@ -1142,7 +1357,12 @@
     "precioBase": 96090,
     "escalasUnidades": [],
     "costoLlegada": 73915,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCen-369-01-premium.webp",
+      "assets/catalog/SalCen-369-02-beneficios.webp",
+      "assets/catalog/SalCen-369-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCar-365",
@@ -1168,7 +1388,12 @@
     "precioBase": 99628,
     "escalasUnidades": [],
     "costoLlegada": 76637,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCar-365-01-premium.webp",
+      "assets/catalog/SalCar-365-02-beneficios.webp",
+      "assets/catalog/SalCar-365-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCar-363",
@@ -1195,7 +1420,12 @@
     "precioBase": 105175,
     "escalasUnidades": [],
     "costoLlegada": 80904,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCar-363-01-premium.webp",
+      "assets/catalog/SalCar-363-02-beneficios.webp",
+      "assets/catalog/SalCar-363-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCar-362",
@@ -1220,7 +1450,12 @@
     "precioBase": 56311,
     "escalasUnidades": [],
     "costoLlegada": 43316,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCar-362-01-premium.webp",
+      "assets/catalog/SalCar-362-02-beneficios.webp",
+      "assets/catalog/SalCar-362-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalKir-282",
@@ -1245,7 +1480,12 @@
     "costoLlegada": 31970,
     "margenSugeridoPct": 30,
     "precioBase": 41561,
-    "escalasUnidades": []
+    "escalasUnidades": [],
+    "imagenesCatalogo": [
+      "assets/catalog/SalKir-282-01-premium.webp",
+      "assets/catalog/SalKir-282-02-beneficios.webp",
+      "assets/catalog/SalKir-282-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCar-335",
@@ -1271,7 +1511,12 @@
     "precioBase": 55579,
     "escalasUnidades": [],
     "costoLlegada": 42753,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCar-335-01-premium.webp",
+      "assets/catalog/SalCar-335-02-beneficios.webp",
+      "assets/catalog/SalCar-335-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCar-361",
@@ -1299,7 +1544,12 @@
     "precioBase": 61832,
     "escalasUnidades": [],
     "costoLlegada": 47563,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCar-361-01-premium.webp",
+      "assets/catalog/SalCar-361-02-beneficios.webp",
+      "assets/catalog/SalCar-361-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCar-360",
@@ -1326,7 +1576,12 @@
     "precioBase": 55063,
     "escalasUnidades": [],
     "costoLlegada": 42356,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCar-360-01-premium.webp",
+      "assets/catalog/SalCar-360-02-beneficios.webp",
+      "assets/catalog/SalCar-360-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalKir-283",
@@ -1352,7 +1607,12 @@
     "costoLlegada": 38845,
     "margenSugeridoPct": 30,
     "precioBase": 50499,
-    "escalasUnidades": []
+    "escalasUnidades": [],
+    "imagenesCatalogo": [
+      "assets/catalog/SalKir-283-01-premium.webp",
+      "assets/catalog/SalKir-283-02-beneficios.webp",
+      "assets/catalog/SalKir-283-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCar-334",
@@ -1379,7 +1639,12 @@
     "precioBase": 56455,
     "escalasUnidades": [],
     "costoLlegada": 43427,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCar-334-01-premium.webp",
+      "assets/catalog/SalCar-334-02-beneficios.webp",
+      "assets/catalog/SalCar-334-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCar-327",
@@ -1406,7 +1671,12 @@
     "precioBase": 61101,
     "escalasUnidades": [],
     "costoLlegada": 47001,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCar-327-01-premium.webp",
+      "assets/catalog/SalCar-327-02-beneficios.webp",
+      "assets/catalog/SalCar-327-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalCar-299",
@@ -1431,7 +1701,12 @@
     "precioBase": 57204,
     "escalasUnidades": [],
     "costoLlegada": 44003,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalCar-299-01-premium.webp",
+      "assets/catalog/SalCar-299-02-beneficios.webp",
+      "assets/catalog/SalCar-299-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalBen-265",
@@ -1458,7 +1733,12 @@
     "precioBase": 74155,
     "escalasUnidades": [],
     "costoLlegada": 57042,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalBen-265-01-premium.webp",
+      "assets/catalog/SalBen-265-02-beneficios.webp",
+      "assets/catalog/SalBen-265-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelPip-297",
@@ -1483,7 +1763,12 @@
     "precioBase": 56776,
     "escalasUnidades": [],
     "costoLlegada": 43674,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelPip-297-01-premium.webp",
+      "assets/catalog/BelPip-297-02-beneficios.webp",
+      "assets/catalog/BelPip-297-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalNat-439",
@@ -1509,7 +1794,12 @@
     "costoLlegada": 30253,
     "margenSugeridoPct": 30,
     "precioBase": 39329,
-    "escalasUnidades": []
+    "escalasUnidades": [],
+    "imagenesCatalogo": [
+      "assets/catalog/SalNat-439-01-premium.webp",
+      "assets/catalog/SalNat-439-02-beneficios.webp",
+      "assets/catalog/SalNat-439-03-confianza.webp"
+    ]
   },
   {
     "sku": "Belnat-408",
@@ -1536,7 +1826,12 @@
     "precioBase": 61420,
     "escalasUnidades": [],
     "costoLlegada": 47246,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/Belnat-408-01-premium.webp",
+      "assets/catalog/Belnat-408-02-beneficios.webp",
+      "assets/catalog/Belnat-408-03-confianza.webp"
+    ]
   },
   {
     "sku": "Salpip-411",
@@ -1562,7 +1857,12 @@
     "precioBase": 49457,
     "escalasUnidades": [],
     "costoLlegada": 38044,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/Salpip-411-01-premium.webp",
+      "assets/catalog/Salpip-411-02-beneficios.webp",
+      "assets/catalog/Salpip-411-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalHor-404",
@@ -1588,7 +1888,12 @@
     "precioBase": 61779,
     "escalasUnidades": [],
     "costoLlegada": 47522,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalHor-404-01-premium.webp",
+      "assets/catalog/SalHor-404-02-beneficios.webp",
+      "assets/catalog/SalHor-404-03-confianza.webp"
+    ]
   },
   {
     "sku": "AliCel-281",
@@ -1617,7 +1922,12 @@
     "precioBase": 67869,
     "escalasUnidades": [],
     "costoLlegada": 52207,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/AliCel-281-01-premium.webp",
+      "assets/catalog/AliCel-281-02-beneficios.webp",
+      "assets/catalog/AliCel-281-03-confianza.webp"
+    ]
   },
   {
     "sku": "Salpip-416",
@@ -1643,7 +1953,12 @@
     "precioBase": 39200,
     "escalasUnidades": [],
     "costoLlegada": 30154,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/Salpip-416-01-premium.webp",
+      "assets/catalog/Salpip-416-02-beneficios.webp",
+      "assets/catalog/Salpip-416-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalPip-345",
@@ -1670,7 +1985,12 @@
     "precioBase": 25461,
     "escalasUnidades": [],
     "costoLlegada": 19585,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalPip-345-01-premium.webp",
+      "assets/catalog/SalPip-345-02-beneficios.webp",
+      "assets/catalog/SalPip-345-03-confianza.webp"
+    ]
   },
   {
     "sku": "SalPip-316",
@@ -1696,7 +2016,12 @@
     "precioBase": 55589,
     "escalasUnidades": [],
     "costoLlegada": 42761,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/SalPip-316-01-premium.webp",
+      "assets/catalog/SalPip-316-02-beneficios.webp",
+      "assets/catalog/SalPip-316-03-confianza.webp"
+    ]
   },
   {
     "sku": "AliCel-280",
@@ -1725,7 +2050,12 @@
     "costoLlegada": 0,
     "margenSugeridoPct": 30,
     "precioBase": 0,
-    "escalasUnidades": []
+    "escalasUnidades": [],
+    "imagenesCatalogo": [
+      "assets/catalog/AliCel-280-01-premium.webp",
+      "assets/catalog/AliCel-280-02-beneficios.webp",
+      "assets/catalog/AliCel-280-03-confianza.webp"
+    ]
   },
   {
     "sku": "Bebdes-407",
@@ -1751,7 +2081,12 @@
     "precioBase": 42901,
     "escalasUnidades": [],
     "costoLlegada": 33001,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/Bebdes-407-01-premium.webp",
+      "assets/catalog/Bebdes-407-02-beneficios.webp",
+      "assets/catalog/Bebdes-407-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelOrd-58",
@@ -1777,7 +2112,12 @@
     "precioBase": 59778,
     "escalasUnidades": [],
     "costoLlegada": 45983,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelOrd-58-01-premium.webp",
+      "assets/catalog/BelOrd-58-02-beneficios.webp",
+      "assets/catalog/BelOrd-58-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelOrd-55",
@@ -1804,7 +2144,12 @@
     "precioBase": 35833,
     "escalasUnidades": [],
     "costoLlegada": 27564,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelOrd-55-01-premium.webp",
+      "assets/catalog/BelOrd-55-02-beneficios.webp",
+      "assets/catalog/BelOrd-55-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelOrd-217",
@@ -1829,7 +2174,12 @@
     "precioBase": 41720,
     "escalasUnidades": [],
     "costoLlegada": 32092,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelOrd-217-01-premium.webp",
+      "assets/catalog/BelOrd-217-02-beneficios.webp",
+      "assets/catalog/BelOrd-217-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelOrd-210",
@@ -1855,7 +2205,12 @@
     "precioBase": 66230,
     "escalasUnidades": [],
     "costoLlegada": 50946,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelOrd-210-01-premium.webp",
+      "assets/catalog/BelOrd-210-02-beneficios.webp",
+      "assets/catalog/BelOrd-210-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelOrd-194",
@@ -1881,7 +2236,12 @@
     "precioBase": 70858,
     "escalasUnidades": [],
     "costoLlegada": 54506,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelOrd-194-01-premium.webp",
+      "assets/catalog/BelOrd-194-02-beneficios.webp",
+      "assets/catalog/BelOrd-194-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelJus-001",
@@ -1907,7 +2267,12 @@
     "precioBase": 66013,
     "escalasUnidades": [],
     "costoLlegada": 50779,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelJus-001-01-premium.webp",
+      "assets/catalog/BelJus-001-02-beneficios.webp",
+      "assets/catalog/BelJus-001-03-confianza.webp"
+    ]
   },
   {
     "sku": "Beba+D-406",
@@ -1934,7 +2299,12 @@
     "precioBase": 37922,
     "escalasUnidades": [],
     "costoLlegada": 29171,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/Beba-D-406-01-premium.webp",
+      "assets/catalog/Beba-D-406-02-beneficios.webp",
+      "assets/catalog/Beba-D-406-03-confianza.webp"
+    ]
   },
   {
     "sku": "BebEuc-388",
@@ -1961,7 +2331,12 @@
     "precioBase": 77752,
     "escalasUnidades": [],
     "costoLlegada": 59809,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BebEuc-388-01-premium.webp",
+      "assets/catalog/BebEuc-388-02-beneficios.webp",
+      "assets/catalog/BebEuc-388-03-confianza.webp"
+    ]
   },
   {
     "sku": "BebDrb-001",
@@ -1987,7 +2362,12 @@
     "precioBase": 23888,
     "escalasUnidades": [],
     "costoLlegada": 18375,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BebDrb-001-01-premium.webp",
+      "assets/catalog/BebDrb-001-02-beneficios.webp",
+      "assets/catalog/BebDrb-001-03-confianza.webp"
+    ]
   },
   {
     "sku": "BebAqu-163",
@@ -2016,7 +2396,12 @@
     "precioBase": 40392,
     "escalasUnidades": [],
     "costoLlegada": 31071,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BebAqu-163-01-premium.webp",
+      "assets/catalog/BebAqu-163-02-beneficios.webp",
+      "assets/catalog/BebAqu-163-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelFix-001",
@@ -2041,7 +2426,12 @@
     "precioBase": 39542,
     "escalasUnidades": [],
     "costoLlegada": 30417,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelFix-001-01-premium.webp",
+      "assets/catalog/BelFix-001-02-beneficios.webp",
+      "assets/catalog/BelFix-001-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelVic-457",
@@ -2068,7 +2458,12 @@
     "precioBase": 49015,
     "escalasUnidades": [],
     "costoLlegada": 37704,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelVic-457-01-premium.webp",
+      "assets/catalog/BelVic-457-02-beneficios.webp",
+      "assets/catalog/BelVic-457-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelVic-459",
@@ -2095,7 +2490,12 @@
     "costoLlegada": 37029,
     "margenSugeridoPct": 30,
     "precioBase": 48138,
-    "escalasUnidades": []
+    "escalasUnidades": [],
+    "imagenesCatalogo": [
+      "assets/catalog/BelVic-459-01-premium.webp",
+      "assets/catalog/BelVic-459-02-beneficios.webp",
+      "assets/catalog/BelVic-459-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelVic-461",
@@ -2122,7 +2522,12 @@
     "precioBase": 63769,
     "escalasUnidades": [],
     "costoLlegada": 49053,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelVic-461-01-premium.webp",
+      "assets/catalog/BelVic-461-02-beneficios.webp",
+      "assets/catalog/BelVic-461-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelVic-458",
@@ -2149,7 +2554,12 @@
     "precioBase": 44424,
     "escalasUnidades": [],
     "costoLlegada": 34172,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelVic-458-01-premium.webp",
+      "assets/catalog/BelVic-458-02-beneficios.webp",
+      "assets/catalog/BelVic-458-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelVic-462",
@@ -2178,7 +2588,12 @@
     "precioBase": 44559,
     "escalasUnidades": [],
     "costoLlegada": 34276,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelVic-462-01-premium.webp",
+      "assets/catalog/BelVic-462-02-beneficios.webp",
+      "assets/catalog/BelVic-462-03-confianza.webp"
+    ]
   },
   {
     "sku": "BelDif-001",
@@ -2204,7 +2619,12 @@
     "precioBase": 62604,
     "escalasUnidades": [],
     "costoLlegada": 48157,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/BelDif-001-01-premium.webp",
+      "assets/catalog/BelDif-001-02-beneficios.webp",
+      "assets/catalog/BelDif-001-03-confianza.webp"
+    ]
   },
   {
     "sku": "AniMil-002",
@@ -2232,7 +2652,12 @@
     "precioBase": 54952,
     "escalasUnidades": [],
     "costoLlegada": 42271,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/AniMil-002-01-premium.webp",
+      "assets/catalog/AniMil-002-02-beneficios.webp",
+      "assets/catalog/AniMil-002-03-confianza.webp"
+    ]
   },
   {
     "sku": "AniMil-001",
@@ -2260,7 +2685,12 @@
     "precioBase": 52673,
     "escalasUnidades": [],
     "costoLlegada": 40518,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/AniMil-001-01-premium.webp",
+      "assets/catalog/AniMil-001-02-beneficios.webp",
+      "assets/catalog/AniMil-001-03-confianza.webp"
+    ]
   },
   {
     "sku": "AniPip-316",
@@ -2286,7 +2716,12 @@
     "precioBase": 43861,
     "escalasUnidades": [],
     "costoLlegada": 33739,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/AniPip-316-01-premium.webp",
+      "assets/catalog/AniPip-316-02-beneficios.webp",
+      "assets/catalog/AniPip-316-03-confianza.webp"
+    ]
   },
   {
     "sku": "AniVit-001",
@@ -2312,7 +2747,12 @@
     "precioBase": 81292,
     "escalasUnidades": [],
     "costoLlegada": 62532,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/AniVit-001-01-premium.webp",
+      "assets/catalog/AniVit-001-02-beneficios.webp",
+      "assets/catalog/AniVit-001-03-confianza.webp"
+    ]
   },
   {
     "sku": "AniCos-141",
@@ -2340,6 +2780,11 @@
     "precioBase": 170483,
     "escalasUnidades": [],
     "costoLlegada": 131141,
-    "margenSugeridoPct": 30
+    "margenSugeridoPct": 30,
+    "imagenesCatalogo": [
+      "assets/catalog/AniCos-141-01-premium.webp",
+      "assets/catalog/AniCos-141-02-beneficios.webp",
+      "assets/catalog/AniCos-141-03-confianza.webp"
+    ]
   }
 ]

@@ -24,6 +24,7 @@ body {
 
 /* Header */
 .site-header {
+  position: relative;
   background:
     linear-gradient(120deg, rgba(15, 118, 110, 0.96), rgba(17, 94, 89, 0.92)),
     url("https://images.unsplash.com/photo-1607083206968-13611e3d76db?auto=format&fit=crop&w=1600&q=70");
@@ -31,6 +32,31 @@ body {
   background-position: center;
   color: #fff;
 }
+.admin-menu {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+.admin-menu span {
+  width: 19px;
+  height: 2px;
+  border-radius: 999px;
+  background: #fff;
+}
+.admin-menu:hover { background: rgba(255, 255, 255, 0.24); }
 .header-inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -290,6 +316,96 @@ body {
 .site-footer p { margin: 4px 0; }
 .admin-link { color: var(--ink-soft); text-decoration: none; font-size: 12px; opacity: 0.7; }
 .admin-link:hover { color: var(--accent); opacity: 1; text-decoration: underline; }
+
+/* ---------------- Acceso administrador ---------------- */
+.admin-login {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.admin-login[hidden] { display: none; }
+.admin-login-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(3px);
+}
+.admin-login-card {
+  position: relative;
+  width: min(100%, 380px);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  padding: 26px;
+  display: grid;
+  gap: 14px;
+}
+.admin-login-card h2 {
+  margin: 0 0 4px;
+  font-size: 21px;
+  color: var(--ink);
+}
+.admin-login-card label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.admin-login-card input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px 12px;
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+}
+.admin-login-card input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+}
+.admin-login-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.admin-login-error {
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+}
+.admin-login-submit {
+  border: 0;
+  border-radius: 8px;
+  background: var(--brand);
+  color: #fff;
+  padding: 12px 15px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.admin-login-submit:hover { background: #115e59; }
+.admin-login-submit:disabled { opacity: 0.65; cursor: wait; }
 
 /* ---------------- Cotizador en el modal ---------------- */
 .cotizar-box {

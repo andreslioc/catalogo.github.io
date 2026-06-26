@@ -6,7 +6,8 @@ import {
   getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import {
-  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged,
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, getIdTokenResult,
+  setPersistence, browserLocalPersistence,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 const firebaseConfig = {
@@ -26,5 +27,6 @@ export const COLLECTION = "catalogo_productos";
 
 export {
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
-  signInWithEmailAndPassword, signOut, onAuthStateChanged,
+  signInWithEmailAndPassword, signOut, onAuthStateChanged, getIdTokenResult,
+  setPersistence, browserLocalPersistence,
 };

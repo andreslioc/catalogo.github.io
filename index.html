@@ -10,6 +10,11 @@
 </head>
 <body>
   <header class="site-header">
+    <button id="admin-menu" class="admin-menu" type="button" aria-label="Acceso administrador" title="Acceso administrador">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
     <div class="header-inner">
       <h1>Catálogo de Productos</h1>
       <p class="subtitle">Suplementos · Salud · Belleza · Bebés · Alimentos</p>
@@ -148,9 +153,26 @@
     </div>
   </aside>
 
+  <div id="admin-login" class="admin-login" hidden>
+    <div class="admin-login-backdrop" data-admin-close></div>
+    <form id="admin-login-form" class="admin-login-card" autocomplete="on">
+      <button class="admin-login-close" type="button" data-admin-close aria-label="Cerrar">&times;</button>
+      <h2>Administrador</h2>
+      <label>
+        <span>Usuario</span>
+        <input id="admin-user" type="email" autocomplete="username" required />
+      </label>
+      <label>
+        <span>Contraseña</span>
+        <input id="admin-pass" type="password" autocomplete="current-password" required />
+      </label>
+      <p id="admin-login-error" class="admin-login-error" hidden></p>
+      <button id="admin-login-submit" class="admin-login-submit" type="submit">Entrar al editor</button>
+    </form>
+  </div>
+
   <footer class="site-footer">
     <p>Catálogo · <span id="footer-count"></span> productos</p>
-    <p><a href="admin.html" class="admin-link">Editar catálogo</a></p>
   </footer>
 
   <script type="module" src="app.js"></script>

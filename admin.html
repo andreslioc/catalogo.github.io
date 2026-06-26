@@ -8,16 +8,11 @@
   <link rel="stylesheet" href="admin.css" />
 </head>
 <body class="admin">
-  <!-- Login real con Firebase Auth -->
   <div id="login" class="login-screen">
-    <form id="login-form" class="login-card">
-      <h1>🔒 Editar Catálogo</h1>
-      <p>Inicia sesión con tu cuenta autorizada.</p>
-      <input id="login-email" type="email" placeholder="Correo" autocomplete="username" />
-      <input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password" />
-      <button type="submit">Entrar</button>
-      <p id="login-error" class="login-error" hidden></p>
-    </form>
+    <div class="login-card access-check">
+      <h1>Validando acceso</h1>
+      <p>Un momento mientras confirmamos tu sesión de administrador.</p>
+    </div>
   </div>
 
   <!-- Panel admin -->
