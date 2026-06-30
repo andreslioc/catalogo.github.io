@@ -9,6 +9,9 @@ import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, getIdTokenResult,
   setPersistence, browserLocalPersistence,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import {
+  getStorage, ref as storageRef, uploadBytes, getDownloadURL,
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDser9H4yD-IX4ZGU0YmTBIkpcUs7T_bMA",
@@ -22,6 +25,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const storage = getStorage(app);
 
 export const COLLECTION = "catalogo_productos";
 
@@ -29,4 +33,5 @@ export {
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signInWithEmailAndPassword, signOut, onAuthStateChanged, getIdTokenResult,
   setPersistence, browserLocalPersistence,
+  storageRef, uploadBytes, getDownloadURL,
 };

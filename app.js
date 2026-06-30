@@ -323,8 +323,16 @@ function openModal(p) {
 }
 
 function productImages(p) {
-  const stock = String(p?.imagen || "").trim();
-  return stock ? [stock] : [];
+  const imgs = [];
+  const cover = String(p?.imagen || "").trim();
+  if (cover) imgs.push(cover);
+  if (Array.isArray(p?.imagenesCatalogo)) {
+    p.imagenesCatalogo.forEach((u) => {
+      const s = String(u || "").trim();
+      if (s && !imgs.includes(s)) imgs.push(s);
+    });
+  }
+  return imgs;
 }
 
 function modalPageCount() {

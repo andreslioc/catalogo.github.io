@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Editar Catálogo · Admin</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="admin.css?v=20260626-9" />
+  <link rel="stylesheet" href="admin.css?v=20260630-1" />
 </head>
 <body class="admin">
   <div id="login" class="login-screen">
@@ -102,10 +102,18 @@
       </div>
 
       <div class="edit-grid">
-        <label class="field">
-          <span>Imagen (URL)</span>
-          <input class="f-imagen" placeholder="https://…" />
-        </label>
+        <div class="field field-full gallery-field">
+          <span>Fotos del producto <em>(la primera es la portada)</em></span>
+          <div class="gallery-grid"></div>
+          <div class="gallery-add">
+            <label class="btn btn-ghost gallery-upload">
+              <span class="gallery-upload-label">+ Subir foto</span>
+              <input type="file" accept="image/*" multiple hidden class="g-file" />
+            </label>
+            <input class="g-url" type="url" placeholder="…o pega la URL de una imagen" />
+            <button type="button" class="btn btn-ghost g-url-add">Agregar URL</button>
+          </div>
+        </div>
         <label class="field">
           <span>Categoría</span>
           <input class="f-categoria" list="cat-list" placeholder="Categoría" />
@@ -162,6 +170,6 @@
 
   <datalist id="cat-list"></datalist>
 
-  <script type="module" src="admin.js?v=20260626-9"></script>
+  <script type="module" src="admin.js?v=20260630-1"></script>
 </body>
 </html>

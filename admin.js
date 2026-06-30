@@ -1,8 +1,9 @@
 import {
-  db, auth, COLLECTION,
+  db, auth, storage, COLLECTION,
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signOut, onAuthStateChanged, getIdTokenResult,
-} from "./firebase-config.js?v=20260625-4";
+  storageRef, uploadBytes, getDownloadURL,
+} from "./firebase-config.js?v=20260630-1";
 import {
   DEFAULT_MARGIN_PCT,
   DEFAULT_WHOLESALE_RULES,
@@ -182,7 +183,17 @@ async function loadData() {
 function normalizeProduct(p) {
   TEXT_FIELDS.forEach((f) => { if (typeof p[f] !== "string") p[f] = p[f] == null ? "" : String(p[f]); });
   LIST_FIELDS.forEach((f) => { if (!Array.isArray(p[f])) p[f] = []; });
-  p.imagenesCatalogo = [];
+  // Galería: unifica la portada (imagen) y las fotos adicionales (imagenesCatalogo)
+  // en una sola lista sin duplicados. La primera foto es la portada.
+  const gallery = [];
+  const cover = String(p.imagen || "").trim();
+  if (cover) gallery.push(cover);
+  (Array.isArray(p.imagenesCatalogo) ? p.imagenesCatalogo : []).forEach((u) => {
+    const s = String(u || "").trim();
+    if (s && !gallery.includes(s)) gallery.push(s);
+  });
+  p.imagenesCatalogo = gallery;
+  p.imagen = gallery[0] || "";
   p.costoLlegada = Number(p.costoLlegada) || 0;
   p.margenSugeridoPct = Number.isFinite(Number(p.margenSugeridoPct)) ? Number(p.margenSugeridoPct) : DEFAULT_MARGIN_PCT;
   p.precioBase = Number(p.precioBase) || 0;
@@ -258,7 +269,7 @@ function buildRow(p) {
   });
 
   bindPriceFields(node, p);
-  bindImageFields(node, p, setThumb);
+  bindGalleryFields(node, p, setThumb);
   bindScaleFields(node, p);
   bindDelete(node, p);
   return node;
@@ -281,17 +292,93 @@ function bindPriceFields(node, p) {
   });
 }
 
-function bindImageFields(node, p, setThumb) {
-  [".f-img1", ".f-img2", ".f-img3"].forEach((selector, idx) => {
-    const input = node.querySelector(selector);
-    if (!input) return;
-    input.value = p.imagenesCatalogo[idx] || "";
-    input.addEventListener("input", () => {
-      p.imagenesCatalogo[idx] = input.value.trim();
-      setThumb(p.imagen);
-      markDirty();
+async function uploadImage(file, sku) {
+  const safeName = (file.name || "foto").replace(/[^\w.\-]+/g, "_");
+  const folder = (sku || "sin-sku").trim().replace(/[^\w\-]+/g, "_") || "sin-sku";
+  const ref = storageRef(storage, `catalogo/${folder}/${Date.now()}-${safeName}`);
+  await uploadBytes(ref, file);
+  return getDownloadURL(ref);
+}
+
+function bindGalleryFields(node, p, setThumb) {
+  const grid = node.querySelector(".gallery-grid");
+  const fileInput = node.querySelector(".g-file");
+  const urlInput = node.querySelector(".g-url");
+  const urlAdd = node.querySelector(".g-url-add");
+  const uploadLabel = node.querySelector(".gallery-upload");
+
+  const syncCover = () => {
+    p.imagen = p.imagenesCatalogo[0] || "";
+    setThumb(p.imagen);
+  };
+
+  const renderGallery = () => {
+    grid.innerHTML = "";
+    if (!p.imagenesCatalogo.length) {
+      const empty = document.createElement("p");
+      empty.className = "gallery-empty";
+      empty.textContent = "Sin fotos todavía. Sube una o pega una URL.";
+      grid.appendChild(empty);
+      return;
+    }
+    p.imagenesCatalogo.forEach((url, idx) => {
+      const item = document.createElement("div");
+      item.className = "gallery-item" + (idx === 0 ? " is-cover" : "");
+      item.innerHTML = `
+        <img src="${escapeAttr(url)}" alt="" loading="lazy" decoding="async" />
+        ${idx === 0
+          ? '<span class="gallery-badge">Portada</span>'
+          : '<button type="button" class="g-cover" title="Usar como portada">★</button>'}
+        <button type="button" class="g-del" title="Quitar foto">✕</button>`;
+      item.querySelector(".g-del").addEventListener("click", () => {
+        p.imagenesCatalogo.splice(idx, 1);
+        markDirty(); syncCover(); renderGallery();
+      });
+      const coverBtn = item.querySelector(".g-cover");
+      if (coverBtn) coverBtn.addEventListener("click", () => {
+        const [moved] = p.imagenesCatalogo.splice(idx, 1);
+        p.imagenesCatalogo.unshift(moved);
+        markDirty(); syncCover(); renderGallery();
+      });
+      grid.appendChild(item);
     });
+  };
+
+  const addUrl = (raw) => {
+    const url = String(raw || "").trim();
+    if (!url) return;
+    if (p.imagenesCatalogo.includes(url)) { toast("Esa foto ya está en la galería."); return; }
+    p.imagenesCatalogo.push(url);
+    markDirty(); syncCover(); renderGallery();
+  };
+
+  urlAdd.addEventListener("click", () => { addUrl(urlInput.value); urlInput.value = ""; });
+  urlInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); addUrl(urlInput.value); urlInput.value = ""; }
   });
+
+  fileInput.addEventListener("change", async () => {
+    const files = Array.from(fileInput.files || []);
+    fileInput.value = "";
+    if (!files.length) return;
+    uploadLabel.classList.add("is-loading");
+    let added = 0;
+    try {
+      for (const file of files) {
+        if (!file.type.startsWith("image/")) { toast(`"${file.name}" no es una imagen.`, true); continue; }
+        const url = await uploadImage(file, p.sku);
+        if (!p.imagenesCatalogo.includes(url)) { p.imagenesCatalogo.push(url); added++; }
+      }
+      if (added) { markDirty(); syncCover(); renderGallery(); }
+      toast(added ? "Foto(s) subida(s). No olvides Guardar cambios." : "No se agregó ninguna foto.");
+    } catch (err) {
+      toast("Error al subir la foto: " + (err?.code || err?.message || err), true);
+    } finally {
+      uploadLabel.classList.remove("is-loading");
+    }
+  });
+
+  renderGallery();
 }
 
 function bindScaleFields(node, p) {
@@ -378,7 +465,11 @@ function toFirestore(p, orden) {
   out.precio = out.precioBase > 0 ? money(out.precioBase) : "";
   out.costoLlegada = Number(p.costoLlegada) || 0;
   out.margenSugeridoPct = Number(p.margenSugeridoPct) || DEFAULT_MARGIN_PCT;
-  out.imagenesCatalogo = [];
+  const gallery = (p.imagenesCatalogo || [])
+    .map((u) => String(u || "").trim())
+    .filter((u, i, arr) => u && arr.indexOf(u) === i);
+  out.imagenesCatalogo = gallery;
+  out.imagen = gallery[0] || "";
   out.escalasUnidades = (p.escalasUnidades || [])
     .map((e) => ({ desde: Number(e.desde) || 0, precio: Number(e.precio) || 0 }))
     .filter((e) => e.desde > 0 && e.precio > 0);
