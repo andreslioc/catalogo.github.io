@@ -351,6 +351,30 @@ function renderCarousel() {
   prev.style.display = total > 1 ? "" : "none";
   next.style.display = total > 1 ? "" : "none";
   renderInfoBook();
+  preloadNeighborImages();
+}
+
+// Resolves once the bitmap is downloaded AND decoded, so it can be painted in
+// the same frame it is inserted (no late "pop in" after the page turn). The
+// browser caches the URL, so the real <img> later reuses it instantly.
+function preloadImage(url) {
+  return new Promise((resolve) => {
+    if (!url) { resolve(); return; }
+    const img = new Image();
+    const settle = () => resolve();
+    img.onload = () => { (img.decode ? img.decode() : Promise.resolve()).then(settle, settle); };
+    img.onerror = settle;
+    img.src = url;
+  });
+}
+
+// Warm the adjacent photos so a page turn finds them already decoded in cache.
+function preloadNeighborImages() {
+  const imgs = state.currentImages;
+  if (!imgs || imgs.length <= 1) return;
+  const i = state.currentImageIdx % imgs.length;
+  preloadImage(imgs[(i + 1) % imgs.length]);
+  preloadImage(imgs[(i - 1 + imgs.length) % imgs.length]);
 }
 
 function stepCarousel(delta) {
@@ -364,6 +388,9 @@ function stepCarousel(delta) {
   state.currentPrevImageIdx = previousIdx;
   state.currentTurnDirection = isNext ? 1 : -1;
 
+  const imgs = state.currentImages.length ? state.currentImages : [""];
+  const destUrl = imgs[nextIdx % imgs.length];
+
   // The turning leaf always lives on the info side (the half whose content
   // actually changes). NEXT: the leaf carries the page we are leaving and
   // lifts away over the spine, revealing the next page underneath. PREV: the
@@ -371,9 +398,16 @@ function stepCarousel(delta) {
   renderTurnSheet(isNext ? previousIdx : nextIdx, isNext);
 
   if (isNext) {
-    // Reveal the destination underneath as soon as the leaf starts lifting.
+    // Reveal the destination as soon as the leaf starts lifting, but wait for
+    // the new photo to be decoded so it fades in together with the turn
+    // instead of popping in after the animation already finished.
     state.currentImageIdx = nextIdx;
-    renderCarousel();
+    preloadImage(destUrl).then(() => {
+      if (state.currentImageIdx === nextIdx) renderCarousel();
+    });
+  } else {
+    // PREV reveals at animation end; warm the bitmap now so it is ready by then.
+    preloadImage(destUrl);
   }
 
   let done = false;
@@ -399,7 +433,7 @@ function stepCarousel(delta) {
 function renderImagePage(url, index, total, cls) {
   return `
     <figure class="${cls}" aria-label="Imagen ${index + 1} de ${total}">
-      ${url ? `<img src="${escapeAttr(url)}" alt="${escapeAttr(state.current?.nombre || "")}" loading="lazy" />` : '<span class="ph">Sin imagen</span>'}
+      ${url ? `<img src="${escapeAttr(url)}" alt="${escapeAttr(state.current?.nombre || "")}" decoding="async" />` : '<span class="ph">Sin imagen</span>'}
     </figure>
   `;
 }
