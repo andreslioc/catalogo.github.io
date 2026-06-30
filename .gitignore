@@ -1,3 +1,7 @@
+# Variables de entorno (credenciales, API keys)
+.env
+.env.*
+
 # Dependencias del build del PDF (se instalan con: cd _build && npm install)
 _build/node_modules/
 
