@@ -2,8 +2,8 @@ import {
   db, auth, storage, COLLECTION,
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signOut, onAuthStateChanged, getIdTokenResult,
-  storageRef, uploadBytes, getDownloadURL,
-} from "./firebase-config.js?v=20260630-1";
+  storageRef, uploadBytesResumable, getDownloadURL,
+} from "./firebase-config.js?v=20260701-1";
 import {
   DEFAULT_MARGIN_PCT,
   DEFAULT_WHOLESALE_RULES,
@@ -18,6 +18,11 @@ const TEXT_FIELDS = [
 const LIST_FIELDS = ["beneficios", "ingredientes"];
 const CONFIG_COLLECTION = "catalogo_config";
 const PRICING_DOC = "pricing";
+const IMAGE_UPLOAD_TIMEOUT_MS = 45000;
+const IMAGE_UPLOAD_STALLED_MS = 12000;
+const EMBED_IMAGE_MAX_SIDE = 1100;
+const EMBED_IMAGE_QUALITY = 0.82;
+const EMBED_IMAGE_MAX_BYTES = 260 * 1024;
 
 const state = {
   products: [],
@@ -25,6 +30,7 @@ const state = {
   deleted: new Set(),
   search: "",
   dirty: false,
+  storageUploadUnavailable: false,
 };
 const els = {};
 let authResolved = false;
@@ -292,12 +298,165 @@ function bindPriceFields(node, p) {
   });
 }
 
-async function uploadImage(file, sku) {
+async function uploadImage(file, sku, onProgress = () => {}) {
   const safeName = (file.name || "foto").replace(/[^\w.\-]+/g, "_");
   const folder = (sku || "sin-sku").trim().replace(/[^\w\-]+/g, "_") || "sin-sku";
   const ref = storageRef(storage, `catalogo/${folder}/${Date.now()}-${safeName}`);
-  await uploadBytes(ref, file);
-  return getDownloadURL(ref);
+  const metadata = file.type ? { contentType: file.type } : undefined;
+  const task = uploadBytesResumable(ref, file, metadata);
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let timeoutId;
+    let stalledId;
+
+    const finish = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      clearTimeout(stalledId);
+      fn(value);
+    };
+
+    stalledId = setTimeout(() => {
+      const err = new Error("Firebase Storage no empezo a transferir la foto.");
+      err.code = "upload/stalled";
+      finish(reject, err);
+      try { task.cancel(); } catch {}
+    }, IMAGE_UPLOAD_STALLED_MS);
+
+    timeoutId = setTimeout(() => {
+      const err = new Error("La subida tardo demasiado. Revisa tu conexion e intenta con una foto mas liviana.");
+      err.code = "upload/timeout";
+      finish(reject, err);
+      try { task.cancel(); } catch {}
+    }, IMAGE_UPLOAD_TIMEOUT_MS);
+
+    task.on("state_changed",
+      (snapshot) => {
+        const pct = snapshot.totalBytes
+          ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+          : 0;
+        if (snapshot.bytesTransferred > 0) clearTimeout(stalledId);
+        onProgress(pct);
+      },
+      (err) => finish(reject, err),
+      async () => {
+        try {
+          finish(resolve, await getDownloadURL(ref));
+        } catch (err) {
+          finish(reject, err);
+        }
+      },
+    );
+  });
+}
+
+function uploadErrorMessage(err) {
+  const code = err?.code || "";
+  if (code === "upload/stalled") return "Firebase Storage no empezo la subida. Se usara una copia comprimida local si es posible.";
+  if (code === "upload/timeout") return err.message;
+  if (code === "storage/unauthenticated") return "La sesion expiro. Vuelve a iniciar sesion e intenta subir la foto otra vez.";
+  if (code === "storage/unauthorized") return "Firebase Storage rechazo la foto por permisos. Revisa las reglas de Storage para el usuario administrador.";
+  if (code === "storage/quota-exceeded") return "Firebase Storage no tiene cuota disponible.";
+  if (code === "storage/retry-limit-exceeded") return "Firebase no pudo completar la subida por conexion. Intenta de nuevo o usa una foto mas liviana.";
+  if (code === "storage/canceled") return "La subida fue cancelada. Intenta de nuevo.";
+  return code || err?.message || String(err);
+}
+
+function canEmbedAfterUploadError(err) {
+  return [
+    "upload/stalled",
+    "upload/timeout",
+    "storage/unauthorized",
+    "storage/quota-exceeded",
+    "storage/retry-limit-exceeded",
+    "storage/unknown",
+  ].includes(err?.code || "");
+}
+
+async function galleryImageUrl(file, sku, onProgress, onFallback) {
+  if (state.storageUploadUnavailable) {
+    onFallback(null);
+    return embeddedImageDataUrl(file);
+  }
+
+  try {
+    return await uploadImage(file, sku, onProgress);
+  } catch (err) {
+    if (!canEmbedAfterUploadError(err)) throw err;
+    state.storageUploadUnavailable = true;
+    onFallback(err);
+    try {
+      return await embeddedImageDataUrl(file);
+    } catch (embedErr) {
+      const msg = uploadErrorMessage(err) + " Ademas, no se pudo preparar una copia local de la foto.";
+      embedErr.message = msg;
+      throw embedErr;
+    }
+  }
+}
+
+async function embeddedImageDataUrl(file) {
+  if (file.type === "image/svg+xml") return readBlobAsDataUrl(file);
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = await loadImage(objectUrl);
+    const attempts = [
+      { maxSide: EMBED_IMAGE_MAX_SIDE, quality: EMBED_IMAGE_QUALITY, type: "image/webp" },
+      { maxSide: 900, quality: 0.74, type: "image/webp" },
+      { maxSide: 720, quality: 0.68, type: "image/webp" },
+      { maxSide: 600, quality: 0.62, type: "image/jpeg" },
+    ];
+    let bestBlob = null;
+
+    for (const attempt of attempts) {
+      const blob = await imageToBlob(img, attempt);
+      if (!blob) continue;
+      bestBlob = blob;
+      if (blob.size <= EMBED_IMAGE_MAX_BYTES) break;
+    }
+
+    return readBlobAsDataUrl(bestBlob || file);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("No se pudo leer la imagen seleccionada."));
+    img.src = src;
+  });
+}
+
+function imageToBlob(img, { maxSide, quality, type }) {
+  const scale = Math.min(1, maxSide / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+  const width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+  const height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return Promise.resolve(null);
+  if (type === "image/jpeg") {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+  }
+  ctx.drawImage(img, 0, 0, width, height);
+  return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+}
+
+function readBlobAsDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("No se pudo preparar la imagen seleccionada."));
+    reader.readAsDataURL(blob);
+  });
 }
 
 function bindGalleryFields(node, p, setThumb) {
@@ -306,6 +465,11 @@ function bindGalleryFields(node, p, setThumb) {
   const urlInput = node.querySelector(".g-url");
   const urlAdd = node.querySelector(".g-url-add");
   const uploadLabel = node.querySelector(".gallery-upload");
+  const uploadText = node.querySelector(".gallery-upload-label");
+  const defaultUploadText = uploadText?.textContent || "+ Subir foto";
+  const setUploadText = (text) => {
+    if (uploadText) uploadText.textContent = text;
+  };
 
   const syncCover = () => {
     p.imagen = p.imagenesCatalogo[0] || "";
@@ -362,19 +526,34 @@ function bindGalleryFields(node, p, setThumb) {
     fileInput.value = "";
     if (!files.length) return;
     uploadLabel.classList.add("is-loading");
+    setUploadText("Subiendo 0%");
     let added = 0;
+    let embedded = 0;
     try {
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         if (!file.type.startsWith("image/")) { toast(`"${file.name}" no es una imagen.`, true); continue; }
-        const url = await uploadImage(file, p.sku);
+        const prefix = files.length > 1 ? `${i + 1}/${files.length} ` : "";
+        const url = await galleryImageUrl(
+          file,
+          p.sku,
+          (pct) => setUploadText(`Subiendo ${prefix}${pct}%`),
+          () => {
+            embedded++;
+            setUploadText(`Optimizando ${prefix}foto`);
+          },
+        );
         if (!p.imagenesCatalogo.includes(url)) { p.imagenesCatalogo.push(url); added++; }
       }
       if (added) { markDirty(); syncCover(); renderGallery(); }
-      toast(added ? "Foto(s) subida(s). No olvides Guardar cambios." : "No se agregó ninguna foto.");
+      toast(added
+        ? (embedded ? "Foto(s) agregada(s) comprimida(s). No olvides Guardar cambios." : "Foto(s) subida(s). No olvides Guardar cambios.")
+        : "No se agregó ninguna foto.");
     } catch (err) {
-      toast("Error al subir la foto: " + (err?.code || err?.message || err), true);
+      toast("Error al subir la foto: " + uploadErrorMessage(err), true);
     } finally {
       uploadLabel.classList.remove("is-loading");
+      setUploadText(defaultUploadText);
     }
   });
 

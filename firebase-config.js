@@ -10,7 +10,7 @@ import {
   setPersistence, browserLocalPersistence,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
-  getStorage, ref as storageRef, uploadBytes, getDownloadURL,
+  getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js";
 
 const firebaseConfig = {
@@ -33,5 +33,5 @@ export {
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signInWithEmailAndPassword, signOut, onAuthStateChanged, getIdTokenResult,
   setPersistence, browserLocalPersistence,
-  storageRef, uploadBytes, getDownloadURL,
+  storageRef, uploadBytesResumable, getDownloadURL,
 };
