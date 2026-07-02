@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Editar Catálogo · Admin</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="admin.css?v=20260630-1" />
+  <link rel="stylesheet" href="admin.css?v=20260702-1" />
 </head>
 <body class="admin">
   <div id="login" class="login-screen">
@@ -37,6 +37,11 @@
           <a href="index.html" class="btn btn-ghost" target="_blank" rel="noopener">Ver catálogo ↗</a>
         </div>
       </div>
+      <form id="sku-import-form" class="sku-import">
+        <label for="sku-import-input">Crear desde SKU</label>
+        <input id="sku-import-input" type="text" placeholder="SKU en Neon" autocomplete="off" />
+        <button id="btn-import-sku" class="btn btn-ghost" type="submit">Importar</button>
+      </form>
       <div class="admin-subbar">
         <input id="admin-search" type="search" placeholder="Buscar producto a editar…" />
         <span id="admin-count" class="admin-count"></span>
@@ -170,6 +175,6 @@
 
   <datalist id="cat-list"></datalist>
 
-  <script type="module" src="admin.js?v=20260701-3"></script>
+  <script type="module" src="admin.js?v=20260702-1"></script>
 </body>
 </html>

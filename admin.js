@@ -1,9 +1,9 @@
 import {
-  db, auth, storage, COLLECTION,
+  db, auth, storage, COLLECTION, NEON_IMPORT_ENDPOINT,
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signOut, onAuthStateChanged, getIdTokenResult,
   storageRef, uploadBytesResumable, getDownloadURL,
-} from "./firebase-config.js?v=20260701-1";
+} from "./firebase-config.js?v=20260702-1";
 import {
   DEFAULT_MARGIN_PCT,
   DEFAULT_WHOLESALE_RULES,
@@ -133,12 +133,16 @@ function cacheEls() {
   els.search = document.getElementById("admin-search");
   els.toast = document.getElementById("toast");
   els.catList = document.getElementById("cat-list");
+  els.skuImportForm = document.getElementById("sku-import-form");
+  els.skuImportInput = document.getElementById("sku-import-input");
+  els.skuImportButton = document.getElementById("btn-import-sku");
 }
 
 function bindToolbar() {
   document.getElementById("btn-add").addEventListener("click", addProduct);
   document.getElementById("btn-save").addEventListener("click", save);
   document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
+  els.skuImportForm.addEventListener("submit", importProductBySku);
   els.search.addEventListener("input", (e) => {
     state.search = e.target.value.trim().toLowerCase();
     render();
@@ -618,6 +622,186 @@ function addProduct() {
   els.editor.scrollIntoView({ behavior: "smooth" });
   const first = els.editor.querySelector(".edit-card .f-nombre");
   if (first) first.focus();
+}
+
+async function importProductBySku(e) {
+  e.preventDefault();
+  const sku = (els.skuImportInput.value || "").trim();
+  if (!sku) { toast("Escribe un SKU para buscar en Neon.", true); return; }
+
+  const existing = findProductBySku(sku);
+  if (existing) {
+    const update = confirm(
+      `El SKU "${sku}" ya existe en el catalogo. Actualizar datos basicos y precios desde Neon sin borrar fotos ni textos editados?`,
+    );
+    if (!update) {
+      focusProduct(existing);
+      return;
+    }
+  }
+
+  setImportLoading(true);
+  try {
+    const imported = await fetchNeonProduct(sku);
+    if (existing) {
+      mergeImportedProduct(existing, imported);
+      markDirty();
+      refreshCategories();
+      focusProduct(existing);
+      toast(`SKU ${existing.sku} actualizado desde Neon. Revisa y guarda cambios.`);
+    } else {
+      const nuevo = normalizeProduct({ ...imported, _origSku: null });
+      state.products.unshift(nuevo);
+      state.search = "";
+      els.search.value = "";
+      markDirty();
+      refreshCategories();
+      render();
+      focusFirstProduct();
+      toast(`SKU ${nuevo.sku} importado desde Neon. Revisa y guarda cambios.`);
+    }
+    els.skuImportInput.value = "";
+  } catch (err) {
+    toast(importProductErrorMessage(err), true);
+  } finally {
+    setImportLoading(false);
+  }
+}
+
+async function fetchNeonProduct(sku) {
+  const endpoint = configuredNeonEndpoint();
+  if (!endpoint) {
+    throw new Error("Configura NEON_IMPORT_ENDPOINT en firebase-config.js antes de importar desde Neon.");
+  }
+
+  const token = await currentAdminToken();
+  const url = new URL(endpoint, window.location.href);
+  url.searchParams.set("sku", sku);
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = data?.error || data?.message || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  if (!data?.product) throw new Error("Neon no devolvio un producto valido.");
+  const rawProduct = { ...data.product };
+  const importedMargin = Number(rawProduct.margenSugeridoPct);
+  const hasImportedMargin = Number.isFinite(importedMargin) && importedMargin > 0;
+  if (!hasImportedMargin) delete rawProduct.margenSugeridoPct;
+  return normalizeProduct({
+    ...rawProduct,
+    sku: rawProduct.sku || sku,
+    _origSku: null,
+    _hasImportedMargin: hasImportedMargin,
+  });
+}
+
+function configuredNeonEndpoint() {
+  return String(window.CATALOGO_NEON_IMPORT_ENDPOINT || NEON_IMPORT_ENDPOINT || "").trim();
+}
+
+async function currentAdminToken() {
+  if (auth.currentUser) return auth.currentUser.getIdToken();
+  const user = await waitForAuthUser();
+  if (!user) throw new Error("No se pudo confirmar la sesion de administrador.");
+  return user.getIdToken();
+}
+
+function waitForAuthUser(timeoutMs = 4000) {
+  return new Promise((resolve) => {
+    const done = (user) => {
+      clearTimeout(timer);
+      if (unsubscribe) unsubscribe();
+      resolve(user || null);
+    };
+    let unsubscribe = null;
+    const timer = setTimeout(() => done(auth.currentUser), timeoutMs);
+    unsubscribe = onAuthStateChanged(auth, done);
+  });
+}
+
+function setImportLoading(isLoading) {
+  els.skuImportInput.disabled = isLoading;
+  els.skuImportButton.disabled = isLoading;
+  els.skuImportButton.textContent = isLoading ? "Buscando..." : "Importar";
+}
+
+function findProductBySku(sku) {
+  const key = String(sku || "").trim().toLowerCase();
+  return state.products.find((p) => String(p.sku || "").trim().toLowerCase() === key) || null;
+}
+
+function mergeImportedProduct(target, source) {
+  ["nombre", "marca", "categoria", "presentacion"].forEach((f) => {
+    if (hasValue(source[f])) target[f] = source[f];
+  });
+  ["descripcion", "dosis", "modoUso", "advertencias"].forEach((f) => {
+    if (!hasValue(target[f]) && hasValue(source[f])) target[f] = source[f];
+  });
+  LIST_FIELDS.forEach((f) => {
+    if (!target[f]?.length && source[f]?.length) target[f] = source[f].slice();
+  });
+
+  ["costoLlegada", "precioBase"].forEach((f) => {
+    const n = Number(source[f]) || 0;
+    if (n > 0) target[f] = n;
+  });
+  const margin = Number(source.margenSugeridoPct);
+  if (source._hasImportedMargin && Number.isFinite(margin) && margin > 0) {
+    target.margenSugeridoPct = margin;
+  }
+  if (Array.isArray(source.escalasUnidades) && source.escalasUnidades.length) {
+    target.escalasUnidades = source.escalasUnidades
+      .map((e) => ({ desde: Number(e.desde) || 0, precio: Number(e.precio) || 0 }))
+      .filter((e) => e.desde > 0 && e.precio > 0);
+  }
+
+  const currentGallery = Array.isArray(target.imagenesCatalogo) ? target.imagenesCatalogo : [];
+  const incomingGallery = Array.isArray(source.imagenesCatalogo) ? source.imagenesCatalogo : [];
+  incomingGallery.forEach((url) => {
+    const clean = String(url || "").trim();
+    if (clean && !currentGallery.includes(clean)) currentGallery.push(clean);
+  });
+  target.imagenesCatalogo = currentGallery;
+  target.imagen = target.imagenesCatalogo[0] || target.imagen || "";
+}
+
+function hasValue(value) {
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "number") return Number.isFinite(value) && value !== 0;
+  return String(value || "").trim().length > 0;
+}
+
+function focusProduct(p) {
+  state.search = p.sku || "";
+  els.search.value = state.search;
+  render();
+  focusFirstProduct();
+}
+
+function focusFirstProduct() {
+  requestAnimationFrame(() => {
+    const card = els.editor.querySelector(".edit-card");
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    const input = card.querySelector(".f-nombre") || card.querySelector(".f-sku");
+    if (input) input.focus();
+  });
+}
+
+function importProductErrorMessage(err) {
+  const msg = err?.message || String(err);
+  if (msg === "not-found") return "No se encontro ese SKU en Neon.";
+  if (msg === "missing-sku") return "Escribe un SKU para buscar en Neon.";
+  if (msg === "forbidden") return "Tu usuario no tiene permisos para importar desde Neon.";
+  if (msg === "unauthorized") return "La sesion expiro. Vuelve a iniciar sesion.";
+  return "No se pudo importar desde Neon: " + msg;
 }
 
 function markDirty() { state.dirty = true; }
