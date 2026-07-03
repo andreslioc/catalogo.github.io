@@ -42,35 +42,51 @@ exports.importCatalogProductFromSku = onRequest(
   },
 );
 
+exports.upsertCatalogClientUser = onRequest(
+  {
+    region: "us-central1",
+    timeoutSeconds: 30,
+    memory: "256MiB",
+  },
+  async (req, res) => {
+    setCors(req, res);
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (req.method !== "POST") {
+      sendError(res, httpError(405, "method-not-allowed"));
+      return;
+    }
+
+    try {
+      await requireAdmin(req);
+      const client = await upsertClientUser(req.body || {});
+      res.status(200).json({ client });
+    } catch (err) {
+      sendError(res, err);
+    }
+  },
+);
+
 function setCors(req, res) {
   const origin = req.get("origin");
-  const allowed = allowedOrigins();
-  if (origin && (allowed.includes("*") || allowed.includes(origin))) {
-    res.set("Access-Control-Allow-Origin", origin);
-    res.set("Vary", "Origin");
-  }
+  res.set("Access-Control-Allow-Origin", origin || "*");
+  if (origin) res.set("Vary", "Origin");
   res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Authorization, Content-Type");
   res.set("Access-Control-Max-Age", "3600");
 }
 
-function allowedOrigins() {
-  const defaults = [
-    "https://catalogo.github.io",
-    "https://ventasdashboard-e48b2.web.app",
-    "https://ventasdashboard-e48b2.firebaseapp.com",
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-  ];
-  const configured = csv(process.env.ALLOWED_ORIGINS);
-  return [...new Set([...defaults, ...configured])];
-}
-
-function csv(value) {
+function normalizeSlug(value) {
   return String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 async function requireAdmin(req) {
@@ -87,6 +103,80 @@ function requestSku(req) {
   const raw = req.method === "GET" ? req.query.sku : req.body?.sku;
   const value = Array.isArray(raw) ? raw[0] : raw;
   return String(value || "").trim();
+}
+
+async function upsertClientUser(body) {
+  const nombre = cleanText(body.nombre);
+  const slug = normalizeSlug(body.slug || body.clientId);
+  const clientId = normalizeSlug(body.clientId || slug);
+  const email = cleanText(body.email).toLowerCase();
+  const password = cleanText(body.password);
+  const whatsapp = cleanText(body.whatsapp);
+  const activo = body.activo !== false;
+
+  if (!nombre || !slug || !email) throw httpError(400, "missing-client-fields");
+  if (clientId !== slug) throw httpError(400, "cannot-change-slug");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw httpError(400, "invalid-email");
+  if (password && password.length < 6) throw httpError(400, "weak-password");
+
+  const db = admin.firestore();
+  const clientRef = db.collection("catalogo_clientes").doc(clientId);
+  const clientSnap = await clientRef.get();
+
+  const emailSnap = await db.collection("catalogo_clientes").where("email", "==", email).limit(1).get();
+  const emailOwner = emailSnap.docs[0];
+  if (emailOwner && emailOwner.id !== clientId) throw httpError(409, "email-already-in-use");
+
+  if (!clientSnap.exists && !password) throw httpError(400, "missing-password");
+
+  let user = null;
+  const existingUid = clientSnap.exists ? clientSnap.data().uid : "";
+  if (existingUid) {
+    user = await admin.auth().getUser(existingUid);
+  } else {
+    try {
+      user = await admin.auth().getUserByEmail(email);
+    } catch (err) {
+      if (err?.code !== "auth/user-not-found") throw err;
+    }
+  }
+
+  if (!user) {
+    user = await admin.auth().createUser({
+      email,
+      password,
+      displayName: nombre,
+      disabled: !activo,
+    });
+  } else {
+    const update = {
+      email,
+      displayName: nombre,
+      disabled: !activo,
+    };
+    if (password) update.password = password;
+    user = await admin.auth().updateUser(user.uid, update);
+  }
+
+  await admin.auth().setCustomUserClaims(user.uid, {
+    ...(user.customClaims || {}),
+    catalogClient: true,
+    clientId,
+  });
+
+  const now = admin.firestore.FieldValue.serverTimestamp();
+  await clientRef.set({
+    nombre,
+    slug,
+    email,
+    uid: user.uid,
+    whatsapp,
+    activo,
+    updatedAt: now,
+    ...(clientSnap.exists ? {} : { createdAt: now }),
+  }, { merge: true });
+
+  return { id: clientId, nombre, slug, email, uid: user.uid, whatsapp, activo };
 }
 
 async function findNeonProduct(sku) {
@@ -267,6 +357,11 @@ function httpError(status, message, expose = true) {
 }
 
 function sendError(res, err) {
+  if (err?.code === "auth/email-already-exists") err = httpError(409, "email-already-in-use");
+  if (err?.code === "auth/invalid-password" || err?.code === "auth/weak-password") {
+    err = httpError(400, "weak-password");
+  }
+  if (err?.code === "auth/invalid-email") err = httpError(400, "invalid-email");
   const status = Number(err?.status) || 500;
   const expose = err?.expose !== false && status < 500;
   if (status >= 500) console.error("[importCatalogProductFromSku]", err);

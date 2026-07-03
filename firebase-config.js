@@ -28,8 +28,11 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 
 export const COLLECTION = "catalogo_productos";
+export const CLIENTS_COLLECTION = "catalogo_clientes";
 export const NEON_IMPORT_ENDPOINT =
   "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/importCatalogProductFromSku";
+export const CLIENT_USER_ENDPOINT =
+  "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/upsertCatalogClientUser";
 
 export {
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,

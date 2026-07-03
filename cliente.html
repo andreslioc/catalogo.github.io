@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <title>Portal de Cliente · Catalogo</title>
+  <link rel="stylesheet" href="cliente.css?v=20260702-1" />
+</head>
+<body>
+  <section id="login" class="login-view">
+    <form id="login-form" class="login-panel" autocomplete="on">
+      <h1>Portal de cliente</h1>
+      <label>
+        <span>Correo</span>
+        <input id="login-email" type="email" autocomplete="username" required />
+      </label>
+      <label>
+        <span>Contrasena</span>
+        <input id="login-password" type="password" autocomplete="current-password" required />
+      </label>
+      <p id="login-error" class="form-error" hidden></p>
+      <button id="login-submit" type="submit">Entrar</button>
+      <a href="index.html">Volver al catalogo</a>
+    </form>
+  </section>
+
+  <section id="app" class="client-app" hidden>
+    <header class="client-header">
+      <div>
+        <h1 id="client-name">Catalogo</h1>
+        <p id="client-status"></p>
+      </div>
+      <div class="client-actions">
+        <a id="public-link" class="btn btn-ghost" target="_blank" rel="noopener">Ver catalogo</a>
+        <button id="copy-link" class="btn btn-ghost" type="button">Copiar link</button>
+        <button id="save" class="btn btn-primary" type="button">Guardar precios</button>
+        <button id="logout" class="btn btn-link" type="button">Salir</button>
+      </div>
+    </header>
+
+    <section class="tools">
+      <div class="search-box">
+        <input id="search" type="search" placeholder="Buscar producto, SKU o marca" autocomplete="off" />
+      </div>
+      <label class="margin-tool">
+        <span>Margen sobre precio maestro</span>
+        <input id="margin" type="number" min="0" step="1" placeholder="30" />
+        <button id="apply-margin" class="btn btn-ghost" type="button">Aplicar</button>
+      </label>
+      <label class="toggle-tool">
+        <input id="only-visible" type="checkbox" />
+        <span>Solo visibles</span>
+      </label>
+    </section>
+
+    <main>
+      <p id="count" class="count"></p>
+      <div id="products" class="products"></div>
+    </main>
+
+    <div id="toast" class="toast" hidden></div>
+  </section>
+
+  <template id="row-tpl">
+    <article class="product-row">
+      <img class="p-img" alt="" loading="lazy" decoding="async" />
+      <div class="p-main">
+        <h2 class="p-name"></h2>
+        <p class="p-meta"></p>
+      </div>
+      <label class="p-price">
+        <span>Precio publico</span>
+        <input class="f-price" type="number" min="0" step="1" />
+      </label>
+      <label class="p-visible">
+        <input class="f-visible" type="checkbox" />
+        <span>Visible</span>
+      </label>
+    </article>
+  </template>
+
+  <script type="module" src="cliente.js?v=20260702-1"></script>
+</body>
+</html>

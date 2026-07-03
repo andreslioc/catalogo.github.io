@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Editar Catálogo · Admin</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="admin.css?v=20260702-1" />
+  <link rel="stylesheet" href="admin.css?v=20260702-2" />
 </head>
 <body class="admin">
   <div id="login" class="login-screen">
@@ -48,6 +48,26 @@
         <button id="btn-logout" class="btn-link">Salir</button>
       </div>
     </header>
+
+    <section class="admin-clients">
+      <div class="clients-panel">
+        <div>
+          <h2>Clientes y subcatalogos</h2>
+          <p>Crea usuarios cliente y entregales un link con precios propios.</p>
+        </div>
+        <form id="client-form" class="client-form">
+          <input id="client-name" type="text" placeholder="Nombre comercial" required />
+          <input id="client-slug" type="text" placeholder="slug-del-link" required />
+          <input id="client-email" type="email" placeholder="correo@cliente.com" required />
+          <input id="client-password" type="text" placeholder="Contrasena inicial o nueva" />
+          <input id="client-whatsapp" type="text" placeholder="WhatsApp/contacto" />
+          <label class="client-active"><input id="client-active" type="checkbox" checked /> Activo</label>
+          <button id="client-save" class="btn btn-primary" type="submit">Guardar cliente</button>
+          <button id="client-clear" class="btn btn-ghost" type="button">Limpiar</button>
+        </form>
+        <div id="clients-list" class="clients-list"></div>
+      </div>
+    </section>
 
     <section class="admin-settings">
       <div class="settings-card">
@@ -175,6 +195,6 @@
 
   <datalist id="cat-list"></datalist>
 
-  <script type="module" src="admin.js?v=20260702-1"></script>
+  <script type="module" src="admin.js?v=20260702-2"></script>
 </body>
 </html>

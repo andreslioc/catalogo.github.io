@@ -1,8 +1,8 @@
 import {
-  db, auth, COLLECTION,
+  db, auth, COLLECTION, CLIENTS_COLLECTION,
   collection, getDocs, getDoc, doc, query, orderBy,
   signInWithEmailAndPassword, getIdTokenResult, signOut, setPersistence, browserLocalPersistence,
-} from "./firebase-config.js?v=20260625-4";
+} from "./firebase-config.js?v=20260702-2";
 import { DEFAULT_WHOLESALE_RULES, precioUnitario, tienePrecio, money, normalizeWholesaleRules, quoteTotals } from "./pricing.js";
 
 const CART_KEY = "catalogo_cart_v1";
@@ -21,7 +21,11 @@ const state = {
   currentTurnDirection: 1,
   currentTurnTimer: null,
   wholesaleRules: DEFAULT_WHOLESALE_RULES,
-  cart: loadCart(),     // { [sku]: cantidad }
+  client: null,
+  clientSlug: catalogSlugFromUrl(),
+  catalogUnavailable: false,
+  priceOverrides: new Map(),
+  cart: {},             // { [sku]: cantidad }
 };
 
 const els = {
@@ -52,6 +56,8 @@ const els = {
   adminPass: document.getElementById("admin-pass"),
   adminError: document.getElementById("admin-login-error"),
   adminSubmit: document.getElementById("admin-login-submit"),
+  headerTitle: document.querySelector(".site-header h1"),
+  subtitle: document.querySelector(".subtitle"),
 };
 
 init();
@@ -74,7 +80,11 @@ async function init() {
     }
   }
 
+  await loadClientCatalog();
+  state.all = applyClientCatalog(state.all);
+  state.cart = loadCart();
   await loadPricingConfig();
+  renderCatalogIdentity();
   buildCategoryChips();
   bindEvents();
   openAdminLoginFromQuery();
@@ -107,6 +117,68 @@ async function loadPricingConfig() {
     console.warn("[pricing-config]", err);
     state.wholesaleRules = DEFAULT_WHOLESALE_RULES;
   }
+}
+
+async function loadClientCatalog() {
+  if (!state.clientSlug) return;
+  try {
+    const clientRef = doc(db, CLIENTS_COLLECTION, state.clientSlug);
+    const clientSnap = await getDoc(clientRef);
+    if (!clientSnap.exists() || clientSnap.data().activo === false) {
+      showCatalogUnavailable();
+      return;
+    }
+
+    state.client = { id: clientSnap.id, ...clientSnap.data() };
+    const pricesSnap = await getDocs(collection(clientRef, "precios"));
+    state.priceOverrides = new Map(pricesSnap.docs.map((d) => [String(d.data().sku || d.id), d.data()]));
+  } catch (err) {
+    console.warn("[client-catalog]", err);
+    showCatalogUnavailable();
+  }
+}
+
+function applyClientCatalog(products) {
+  if (!state.client) return products;
+  return products
+    .map((product) => {
+      const override = state.priceOverrides.get(product.sku);
+      if (override?.visible === false) return null;
+      const next = { ...product, _clientPrice: !!override };
+      const price = Number(override?.precioBase) || 0;
+      if (price > 0) {
+        next.precioBase = price;
+        next.precio = money(price);
+      }
+      if (Array.isArray(override?.escalasUnidades)) {
+        next.escalasUnidades = override.escalasUnidades
+          .map((e) => ({ desde: Number(e.desde) || 0, precio: Number(e.precio) || 0 }))
+          .filter((e) => e.desde > 0 && e.precio > 0);
+      }
+      return next;
+    })
+    .filter(Boolean);
+}
+
+function renderCatalogIdentity() {
+  if (!state.client) return;
+  const name = state.client.nombre || "Catalogo";
+  document.title = `${name} · Catalogo`;
+  if (els.headerTitle) els.headerTitle.textContent = name;
+  if (els.subtitle) {
+    els.subtitle.textContent = state.client.subtitulo || "Catalogo compartido con precios propios";
+  }
+}
+
+function showCatalogUnavailable() {
+  state.catalogUnavailable = true;
+  state.all = [];
+  state.filtered = [];
+  state.priceOverrides = new Map();
+  if (els.headerTitle) els.headerTitle.textContent = "Catalogo no disponible";
+  if (els.subtitle) els.subtitle.textContent = "El link no esta activo o no existe.";
+  els.grid.innerHTML = '<p class="empty">Este catalogo no esta disponible.</p>';
+  els.empty.hidden = true;
 }
 
 /* ---------------- FILTROS / GRID ---------------- */
@@ -232,6 +304,11 @@ async function enterAdminWithUser(user) {
 }
 
 function applyFilters() {
+  if (state.catalogUnavailable) {
+    state.filtered = [];
+    render();
+    return;
+  }
   let list = state.all;
   if (state.category !== "Todas") list = list.filter((p) => p.categoria === state.category);
   if (state.search) {
@@ -251,13 +328,19 @@ function render() {
   els.count.textContent =
     state.filtered.length + (state.filtered.length === 1 ? " producto" : " productos");
   els.empty.hidden = state.filtered.length > 0;
+  if (state.catalogUnavailable) {
+    els.count.textContent = "0 productos";
+    els.empty.hidden = true;
+    els.grid.innerHTML = '<p class="empty">Este catalogo no esta disponible.</p>';
+    return;
+  }
 
   els.grid.innerHTML = "";
   const frag = document.createDocumentFragment();
   state.filtered.forEach((p) => {
     const card = document.createElement("article");
     card.className = "card";
-    const precioTxt = tienePrecio(p) ? `${money(p.precioBase)} sugerido` : "";
+    const precioTxt = tienePrecio(p) ? `${money(p.precioBase)}${state.client ? "" : " sugerido"}` : "";
     const img = productImages(p)[0];
     card.innerHTML = `
       <div class="card-media">
@@ -305,7 +388,7 @@ function openModal(p) {
   const cotizar = document.getElementById("m-cotizar");
   if (tienePrecio(p)) {
     cotizar.style.display = "";
-    precioEl.textContent = `${money(p.precioBase)} precio sugerido`;
+    precioEl.textContent = `${money(p.precioBase)}${state.client ? "" : " precio sugerido"}`;
     precioEl.style.display = "";
     renderEscalas(p);
     document.getElementById("m-qty").value = state.cart[p.sku] || 1;
@@ -485,7 +568,7 @@ function renderQuoteCopy() {
   const unit = precioUnitario(p, qty);
   return `
     <div class="turn-quote">
-      <p class="precio">${money(p.precioBase)} precio sugerido</p>
+      <p class="precio">${money(p.precioBase)}${state.client ? "" : " precio sugerido"}</p>
       <div class="cotizar-add">
         <div class="qty-stepper">
           <button type="button" aria-hidden="true">−</button>
@@ -630,11 +713,30 @@ function closeModal() {
 
 /* ---------------- CARRITO / COTIZACIÓN ---------------- */
 function loadCart() {
-  try { return JSON.parse(localStorage.getItem(CART_KEY)) || {}; }
+  try { return JSON.parse(localStorage.getItem(cartStorageKey())) || {}; }
   catch { return {}; }
 }
 function saveCart() {
-  localStorage.setItem(CART_KEY, JSON.stringify(state.cart));
+  localStorage.setItem(cartStorageKey(), JSON.stringify(state.cart));
+}
+
+function cartStorageKey() {
+  return state.clientSlug ? `${CART_KEY}_${state.clientSlug}` : CART_KEY;
+}
+
+function catalogSlugFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return normalizeSlug(params.get("cliente") || params.get("catalogo") || params.get("c"));
+}
+
+function normalizeSlug(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 function cartLines() {

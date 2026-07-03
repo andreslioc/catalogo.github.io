@@ -69,3 +69,110 @@ firebase deploy --only functions:importCatalogProductFromSku
 ```
 
 Si Firebase entrega una URL distinta a la configurada, actualiza `NEON_IMPORT_ENDPOINT` en `firebase-config.js`.
+
+## Subcatalogos por cliente
+
+El catalogo maestro sigue viviendo en:
+
+```txt
+catalogo_productos/{sku}
+```
+
+Cada cliente tiene su propio subcatalogo en:
+
+```txt
+catalogo_clientes/{slug}
+catalogo_clientes/{slug}/precios/{sku}
+```
+
+El documento del cliente guarda datos de acceso/publicacion:
+
+```js
+{
+  nombre: "Distribuidor Norte",
+  slug: "distribuidor-norte",
+  email: "cliente@correo.com",
+  uid: "firebase-auth-uid",
+  whatsapp: "opcional",
+  activo: true
+}
+```
+
+Cada precio personalizado guarda:
+
+```js
+{
+  sku: "SalCar-301",
+  precioBase: 89900,
+  visible: true
+}
+```
+
+El link publico de un cliente es:
+
+```txt
+index.html?cliente=distribuidor-norte
+```
+
+Ese link usa los productos, fotos y textos del catalogo maestro, pero aplica los precios y visibilidad del cliente.
+
+## Portal de cliente
+
+Los clientes entran por:
+
+```txt
+cliente.html
+```
+
+Desde alli pueden:
+
+- Editar precio publico por producto.
+- Ocultar/mostrar productos.
+- Aplicar un margen global sobre el precio maestro.
+- Copiar su link publico.
+
+El acceso de cliente es separado del administrador. Los usuarios cliente deben tener custom claims:
+
+```js
+{
+  catalogClient: true,
+  clientId: "distribuidor-norte"
+}
+```
+
+## Gestion de clientes desde admin
+
+El admin ahora incluye **Clientes y subcatalogos**. Al guardar un cliente llama a la Function:
+
+```txt
+upsertCatalogClientUser
+```
+
+Esa Function:
+
+- Valida que quien llama tenga `admin: true`.
+- Crea o actualiza el usuario en Firebase Auth.
+- Asigna `catalogClient: true` y `clientId`.
+- Crea/actualiza `catalogo_clientes/{slug}`.
+
+Desplegar Functions:
+
+```powershell
+cd functions
+npm.cmd install
+cd ..
+firebase deploy --only functions
+```
+
+Desplegar reglas Firestore:
+
+```powershell
+firebase deploy --only firestore:rules
+```
+
+Las reglas incluidas permiten:
+
+- Lectura publica de `catalogo_productos`.
+- Lectura publica de clientes activos y sus precios.
+- Escritura de precios solo por admin o por el cliente dueño.
+- Gestion de clientes solo por admin.

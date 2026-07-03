@@ -57,6 +57,26 @@ body {
   background: #fff;
 }
 .admin-menu:hover { background: rgba(255, 255, 255, 0.24); }
+.client-access {
+  position: absolute;
+  top: 18px;
+  right: 70px;
+  z-index: 3;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+.client-access:hover { background: rgba(255, 255, 255, 0.24); }
 .header-inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -877,6 +897,7 @@ body {
 @media (max-width: 420px) {
   .header-inner { padding: 34px 14px 28px; }
   .admin-menu { top: 12px; right: 12px; }
+  .client-access { top: 12px; right: 62px; min-height: 42px; padding: 0 10px; font-size: 12px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(136px, 1fr)); }
   .card-body { padding: 10px 11px 13px; }
   .modal { padding: 6px; }

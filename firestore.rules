@@ -1,0 +1,37 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    function isClient(clientId) {
+      return request.auth != null
+        && request.auth.token.catalogClient == true
+        && request.auth.token.clientId == clientId;
+    }
+
+    match /catalogo_productos/{sku} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /catalogo_config/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /catalogo_clientes/{clientId} {
+      allow get: if isAdmin() || isClient(clientId) || resource.data.activo == true;
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+
+      match /precios/{sku} {
+        allow read: if isAdmin() || isClient(clientId)
+          || get(/databases/$(database)/documents/catalogo_clientes/$(clientId)).data.activo == true;
+        allow write: if isAdmin() || isClient(clientId);
+      }
+    }
+  }
+}

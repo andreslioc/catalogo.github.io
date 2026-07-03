@@ -143,6 +143,78 @@
 }
 .admin-count { font-size: 13px; color: var(--ink-soft); white-space: nowrap; }
 
+.admin-clients {
+  max-width: 980px;
+  margin: 18px auto 0;
+  padding: 0 20px;
+}
+.clients-panel {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+  box-shadow: var(--shadow);
+}
+.clients-panel h2 { margin: 0 0 6px; font-size: 16px; }
+.clients-panel p { margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.4; }
+.client-form {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 1.3fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.client-form input[type="text"],
+.client-form input[type="email"] {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.client-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.12);
+}
+.client-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.clients-list { display: grid; gap: 8px; }
+.client-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.client-row h3 { margin: 0; font-size: 14px; }
+.client-row p { margin: 4px 0 0; font-size: 12px; color: var(--ink-soft); }
+.client-row-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.client-status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 12px;
+  font-weight: 700;
+}
+.client-status-badge.is-off {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .admin-settings {
   max-width: 980px;
   margin: 18px auto 0;
@@ -390,6 +462,9 @@
 @media (max-width: 640px) {
   .edit-grid { grid-template-columns: 1fr; }
   .admin-header-inner { flex-direction: column; }
+  .client-form { grid-template-columns: 1fr; }
+  .client-row { grid-template-columns: 1fr; }
+  .client-row-actions { justify-content: flex-start; }
   .settings-card { grid-template-columns: 1fr; }
   .price-box { grid-template-columns: 1fr; }
 }

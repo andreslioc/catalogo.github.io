@@ -1,9 +1,9 @@
 import {
-  db, auth, storage, COLLECTION, NEON_IMPORT_ENDPOINT,
+  db, auth, storage, COLLECTION, CLIENTS_COLLECTION, NEON_IMPORT_ENDPOINT, CLIENT_USER_ENDPOINT,
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signOut, onAuthStateChanged, getIdTokenResult,
   storageRef, uploadBytesResumable, getDownloadURL,
-} from "./firebase-config.js?v=20260702-1";
+} from "./firebase-config.js?v=20260702-2";
 import {
   DEFAULT_MARGIN_PCT,
   DEFAULT_WHOLESALE_RULES,
@@ -26,6 +26,8 @@ const EMBED_IMAGE_MAX_BYTES = 260 * 1024;
 
 const state = {
   products: [],
+  clients: [],
+  editingClientId: null,
   wholesaleRules: DEFAULT_WHOLESALE_RULES.map((r) => ({ ...r })),
   deleted: new Set(),
   search: "",
@@ -116,8 +118,10 @@ async function startApp() {
   cacheEls();
   bindToolbar();
   await loadPricingConfig();
+  await loadClients();
   await loadData();
   refreshCategories();
+  renderClients();
   renderRules();
   render();
 }
@@ -136,6 +140,16 @@ function cacheEls() {
   els.skuImportForm = document.getElementById("sku-import-form");
   els.skuImportInput = document.getElementById("sku-import-input");
   els.skuImportButton = document.getElementById("btn-import-sku");
+  els.clientForm = document.getElementById("client-form");
+  els.clientName = document.getElementById("client-name");
+  els.clientSlug = document.getElementById("client-slug");
+  els.clientEmail = document.getElementById("client-email");
+  els.clientPassword = document.getElementById("client-password");
+  els.clientWhatsapp = document.getElementById("client-whatsapp");
+  els.clientActive = document.getElementById("client-active");
+  els.clientSave = document.getElementById("client-save");
+  els.clientClear = document.getElementById("client-clear");
+  els.clientsList = document.getElementById("clients-list");
 }
 
 function bindToolbar() {
@@ -143,6 +157,10 @@ function bindToolbar() {
   document.getElementById("btn-save").addEventListener("click", save);
   document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
   els.skuImportForm.addEventListener("submit", importProductBySku);
+  els.clientForm.addEventListener("submit", saveClient);
+  els.clientClear.addEventListener("click", clearClientForm);
+  els.clientName.addEventListener("input", suggestClientSlug);
+  els.clientSlug.addEventListener("input", () => { els.clientSlug.value = normalizeSlug(els.clientSlug.value); });
   els.search.addEventListener("input", (e) => {
     state.search = e.target.value.trim().toLowerCase();
     render();
@@ -188,6 +206,164 @@ async function loadData() {
   state.dirty = false;
   state.deleted.clear();
   setStatus(`Cargado desde Firestore · ${state.products.length} productos`);
+}
+
+async function loadClients() {
+  try {
+    let snap;
+    try {
+      snap = await getDocs(query(collection(db, CLIENTS_COLLECTION), orderBy("nombre")));
+    } catch {
+      snap = await getDocs(collection(db, CLIENTS_COLLECTION));
+    }
+    state.clients = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    state.clients = [];
+    toast("No se pudieron cargar clientes: " + (err?.code || err), true);
+  }
+}
+
+function renderClients() {
+  els.clientsList.innerHTML = "";
+  if (!state.clients.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "Aun no hay clientes creados.";
+    els.clientsList.appendChild(empty);
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  state.clients.forEach((client) => {
+    const row = document.createElement("article");
+    row.className = "client-row";
+    const link = publicCatalogUrl(client);
+    row.innerHTML = `
+      <div>
+        <h3>${escapeHtml(client.nombre || client.id)} <span class="client-status-badge${client.activo === false ? " is-off" : ""}">${client.activo === false ? "Inactivo" : "Activo"}</span></h3>
+        <p>${escapeHtml(client.email || "")} · ${escapeHtml(link)}</p>
+      </div>
+      <div class="client-row-actions">
+        <button class="btn btn-ghost" type="button" data-edit>Editar</button>
+        <a class="btn btn-ghost" href="${escapeAttr(link)}" target="_blank" rel="noopener">Ver</a>
+        <button class="btn btn-ghost" type="button" data-copy>Copiar</button>
+      </div>`;
+    row.querySelector("[data-edit]").addEventListener("click", () => editClient(client));
+    row.querySelector("[data-copy]").addEventListener("click", () => copyClientLink(client));
+    frag.appendChild(row);
+  });
+  els.clientsList.appendChild(frag);
+}
+
+function editClient(client) {
+  state.editingClientId = client.id;
+  els.clientName.value = client.nombre || "";
+  els.clientSlug.value = client.slug || client.id || "";
+  els.clientSlug.disabled = true;
+  els.clientEmail.value = client.email || "";
+  els.clientPassword.value = "";
+  els.clientPassword.placeholder = "Nueva contrasena opcional";
+  els.clientWhatsapp.value = client.whatsapp || "";
+  els.clientActive.checked = client.activo !== false;
+  els.clientSave.textContent = "Actualizar cliente";
+  els.clientName.focus();
+}
+
+function clearClientForm() {
+  state.editingClientId = null;
+  els.clientForm.reset();
+  els.clientActive.checked = true;
+  els.clientSlug.disabled = false;
+  els.clientPassword.placeholder = "Contrasena inicial o nueva";
+  els.clientSave.textContent = "Guardar cliente";
+}
+
+function suggestClientSlug() {
+  if (state.editingClientId || els.clientSlug.value.trim()) return;
+  els.clientSlug.value = normalizeSlug(els.clientName.value);
+}
+
+async function saveClient(e) {
+  e.preventDefault();
+  const payload = {
+    clientId: state.editingClientId || normalizeSlug(els.clientSlug.value),
+    nombre: els.clientName.value.trim(),
+    slug: normalizeSlug(els.clientSlug.value),
+    email: els.clientEmail.value.trim().toLowerCase(),
+    password: els.clientPassword.value,
+    whatsapp: els.clientWhatsapp.value.trim(),
+    activo: els.clientActive.checked,
+  };
+
+  if (!payload.nombre || !payload.slug || !payload.email) {
+    toast("Nombre, slug y correo son obligatorios.", true);
+    return;
+  }
+  if (!state.editingClientId && !payload.password.trim()) {
+    toast("La contrasena inicial es obligatoria para clientes nuevos.", true);
+    return;
+  }
+
+  els.clientSave.disabled = true;
+  try {
+    await callClientUserFunction(payload);
+    await loadClients();
+    renderClients();
+    clearClientForm();
+    toast("Cliente guardado. Ya puede entrar al portal.");
+  } catch (err) {
+    toast(clientSaveErrorMessage(err), true);
+  } finally {
+    els.clientSave.disabled = false;
+  }
+}
+
+async function callClientUserFunction(payload) {
+  const endpoint = String(window.CATALOGO_CLIENT_USER_ENDPOINT || CLIENT_USER_ENDPOINT || "").trim();
+  if (!endpoint) throw new Error("missing-endpoint");
+  const token = await currentAdminToken();
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+  return data;
+}
+
+function copyClientLink(client) {
+  const link = publicCatalogUrl(client);
+  navigator.clipboard.writeText(link)
+    .then(() => toast("Link copiado."))
+    .catch(() => toast(link));
+}
+
+function publicCatalogUrl(client) {
+  const url = new URL("index.html", window.location.href);
+  url.searchParams.set("cliente", client.slug || client.id);
+  return url.toString();
+}
+
+function normalizeSlug(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function clientSaveErrorMessage(err) {
+  const msg = err?.message || String(err);
+  if (msg === "email-already-in-use") return "Ese correo ya esta asociado a otro cliente.";
+  if (msg === "slug-in-use") return "Ese slug ya esta en uso por otro cliente.";
+  if (msg === "weak-password") return "La contrasena debe tener al menos 6 caracteres.";
+  if (msg === "forbidden") return "Tu usuario no tiene permisos para gestionar clientes.";
+  return "No se pudo guardar el cliente: " + msg;
 }
 
 function normalizeProduct(p) {
@@ -893,8 +1069,12 @@ function toast(msg, isError) {
 }
 
 function escapeAttr(s) {
+  return escapeHtml(s).replace(/"/g, "&quot;");
+}
+
+function escapeHtml(s) {
   return String(s ?? "")
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 initAuth();
