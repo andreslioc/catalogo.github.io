@@ -1,0 +1,8 @@
+exclude:
+  - functions/
+  - _build/
+  - tmp_debug/
+  - __pycache__/
+  - "*.pyc"
+  - "*.ts"
+  - "*.mjs"
