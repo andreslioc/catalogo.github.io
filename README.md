@@ -104,6 +104,30 @@ firebase deploy --only functions:importCatalogProductFromSku
 
 Si Firebase entrega una URL distinta a la configurada, actualiza `NEON_IMPORT_ENDPOINT` en `firebase-config.js`.
 
+## Completar campos con IA
+
+El admin incluye un flujo de borrador con IA para prerrellenar campos faltantes
+del producto (`presentacion`, `descripcion`, `beneficios`, `ingredientes`,
+`dosis`, `modoUso`, `advertencias`). La Function usa la Responses API de
+OpenAI con busqueda web y salida JSON estructurada. La informacion queda marcada
+como pendiente y el admin no permite guardar el catalogo hasta aprobar o
+descartar el borrador IA.
+
+Configurar el secreto de OpenAI:
+
+```powershell
+firebase functions:secrets:set OPENAI_API_KEY
+```
+
+Desplegar la Function:
+
+```powershell
+firebase deploy --only functions:generateCatalogProductDraft
+```
+
+Opcionalmente se puede fijar un modelo distinto al predeterminado
+`gpt-5.4-mini` usando `OPENAI_MODEL` en el entorno de Functions.
+
 ## Subcatalogos por cliente
 
 El catalogo maestro sigue viviendo en:

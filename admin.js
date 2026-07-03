@@ -1,9 +1,9 @@
 import {
-  db, auth, storage, COLLECTION, CLIENTS_COLLECTION, NEON_IMPORT_ENDPOINT, CLIENT_USER_ENDPOINT,
+  db, auth, storage, COLLECTION, CLIENTS_COLLECTION, NEON_IMPORT_ENDPOINT, CLIENT_USER_ENDPOINT, AI_DRAFT_ENDPOINT,
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signOut, onAuthStateChanged, getIdTokenResult,
   storageRef, uploadBytesResumable, getDownloadURL,
-} from "./firebase-config.js?v=20260702-2";
+} from "./firebase-config.js?v=20260703-2";
 import {
   DEFAULT_MARGIN_PCT,
   DEFAULT_WHOLESALE_RULES,
@@ -16,6 +16,9 @@ const TEXT_FIELDS = [
   "descripcion", "dosis", "modoUso", "advertencias", "presentacion",
 ];
 const LIST_FIELDS = ["beneficios", "ingredientes"];
+const AI_DRAFT_FIELDS = [
+  "presentacion", "descripcion", "beneficios", "ingredientes", "dosis", "modoUso", "advertencias",
+];
 const CONFIG_COLLECTION = "catalogo_config";
 const PRICING_DOC = "pricing";
 const IMAGE_UPLOAD_TIMEOUT_MS = 45000;
@@ -386,8 +389,33 @@ function normalizeProduct(p) {
   p.escalasUnidades = Array.isArray(p.escalasUnidades)
     ? p.escalasUnidades.map((e) => ({ desde: Number(e.desde) || 0, precio: Number(e.precio) || 0 }))
     : [];
+  p.aiDraft = p.aiDraft === true;
+  p.aiReviewed = p.aiReviewed === true;
+  p.aiGeneratedAt = typeof p.aiGeneratedAt === "string" ? p.aiGeneratedAt : "";
+  p.aiModel = typeof p.aiModel === "string" ? p.aiModel : "";
+  p.aiSources = Array.isArray(p.aiSources)
+    ? p.aiSources.map(normalizeAiSource).filter((source) => source.url)
+    : [];
+  p.aiFields = normalizeAiFields(p.aiFields);
   if (!("_origSku" in p)) p._origSku = p.sku || null;
   return p;
+}
+
+function normalizeAiSource(source) {
+  return {
+    title: String(source?.title || source?.url || "").trim(),
+    url: String(source?.url || "").trim(),
+    kind: String(source?.kind || "web").trim(),
+  };
+}
+
+function normalizeAiFields(fields) {
+  const out = {};
+  AI_DRAFT_FIELDS.forEach((field) => {
+    const status = fields?.[field];
+    if (status === "pending" || status === "reviewed") out[field] = status;
+  });
+  return out;
 }
 
 function renderRules() {
@@ -454,11 +482,220 @@ function buildRow(p) {
     });
   });
 
+  bindAiDraftFields(node, p);
   bindPriceFields(node, p);
   bindGalleryFields(node, p, setThumb);
   bindScaleFields(node, p);
   bindDelete(node, p);
   return node;
+}
+
+function bindAiDraftFields(node, p) {
+  const box = node.querySelector(".ai-draft-box");
+  const status = node.querySelector(".ai-draft-status");
+  const sources = node.querySelector(".ai-sources");
+  const generate = node.querySelector(".btn-ai-generate");
+  const approve = node.querySelector(".btn-ai-approve");
+  const discard = node.querySelector(".btn-ai-discard");
+  if (!box || !status || !sources || !generate || !approve || !discard) return;
+
+  const pending = hasPendingAiDraft(p);
+  box.classList.toggle("is-pending", pending);
+  box.classList.toggle("is-reviewed", p.aiReviewed && !pending);
+  if (pending) {
+    status.textContent = "IA pendiente de revision";
+  } else if (p.aiReviewed) {
+    status.textContent = "Informacion IA aprobada";
+  } else {
+    status.textContent = "Sin borrador IA";
+  }
+
+  approve.hidden = !pending;
+  discard.hidden = !pending;
+  renderAiSources(sources, p);
+
+  generate.addEventListener("click", async () => {
+    if (!p.sku && !p.nombre) {
+      toast("Agrega al menos SKU o nombre antes de completar con IA.", true);
+      return;
+    }
+    generate.disabled = true;
+    generate.textContent = "Consultando IA...";
+    try {
+      const result = await fetchAiDraft(p);
+      const changed = applyAiDraft(p, result);
+      if (!changed.length) {
+        toast("La IA no encontro datos verificables nuevos para este producto.", true);
+        render();
+        focusProduct(p);
+        return;
+      }
+      markDirty();
+      render();
+      focusProduct(p);
+      toast(`Borrador IA aplicado en ${changed.length} campo(s). Revisa y aprueba antes de guardar.`);
+    } catch (err) {
+      toast(aiDraftErrorMessage(err), true);
+    } finally {
+      generate.disabled = false;
+      generate.textContent = "Completar con IA";
+    }
+  });
+
+  approve.addEventListener("click", () => {
+    if (!hasPendingAiDraft(p)) return;
+    p.aiDraft = false;
+    p.aiReviewed = true;
+    AI_DRAFT_FIELDS.forEach((field) => {
+      if (p.aiFields?.[field] === "pending") p.aiFields[field] = "reviewed";
+    });
+    p._aiPreviousValues = null;
+    markDirty();
+    render();
+    focusProduct(p);
+    toast("Informacion IA aprobada. Ahora puedes guardar cambios.");
+  });
+
+  discard.addEventListener("click", () => {
+    discardAiDraft(p);
+    markDirty();
+    render();
+    focusProduct(p);
+    toast("Borrador IA descartado.");
+  });
+}
+
+function renderAiSources(container, p) {
+  container.innerHTML = "";
+  const sources = Array.isArray(p.aiSources) ? p.aiSources.filter((source) => source.url) : [];
+  if (!sources.length) return;
+  sources.slice(0, 4).forEach((source, index) => {
+    const link = document.createElement("a");
+    link.href = source.url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = source.title || `Fuente ${index + 1}`;
+    container.appendChild(link);
+  });
+}
+
+function hasPendingAiDraft(p) {
+  return p.aiDraft === true && p.aiReviewed !== true;
+}
+
+async function fetchAiDraft(product) {
+  const endpoint = configuredAiDraftEndpoint();
+  if (!endpoint) throw new Error("missing-ai-draft-endpoint");
+  const token = await currentAdminToken();
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ product: aiDraftProductPayload(product) }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+  }
+  return data;
+}
+
+function configuredAiDraftEndpoint() {
+  return String(window.CATALOGO_AI_DRAFT_ENDPOINT || AI_DRAFT_ENDPOINT || "").trim();
+}
+
+function aiDraftProductPayload(p) {
+  return {
+    sku: p.sku || "",
+    nombre: p.nombre || "",
+    marca: p.marca || "",
+    categoria: p.categoria || "",
+    presentacion: p.presentacion || "",
+    imagen: p.imagen || "",
+    imagenesCatalogo: Array.isArray(p.imagenesCatalogo) ? p.imagenesCatalogo.slice(0, 4) : [],
+  };
+}
+
+function applyAiDraft(product, result) {
+  const draft = result?.draft || {};
+  const changed = [];
+  const previous = {};
+
+  AI_DRAFT_FIELDS.forEach((field) => {
+    if (LIST_FIELDS.includes(field)) {
+      const value = Array.isArray(draft[field])
+        ? draft[field].map((item) => String(item || "").trim()).filter(Boolean)
+        : [];
+      if (!value.length || product[field]?.length) return;
+      previous[field] = Array.isArray(product[field]) ? product[field].slice() : [];
+      product[field] = value;
+      changed.push(field);
+      return;
+    }
+
+    const value = String(draft[field] || "").trim();
+    if (!value || hasValue(product[field])) return;
+    previous[field] = product[field] || "";
+    product[field] = value;
+    changed.push(field);
+  });
+
+  if (!changed.length) return changed;
+
+  product.aiDraft = true;
+  product.aiReviewed = false;
+  product.aiGeneratedAt = result?.generatedAt || new Date().toISOString();
+  product.aiModel = result?.model || "";
+  product.aiSources = Array.isArray(result?.sources)
+    ? result.sources.map(normalizeAiSource).filter((source) => source.url)
+    : [];
+  product.aiFields = normalizeAiFields(product.aiFields);
+  changed.forEach((field) => { product.aiFields[field] = "pending"; });
+  product._aiPreviousValues = previous;
+  return changed;
+}
+
+function discardAiDraft(product) {
+  const previous = product._aiPreviousValues || {};
+  Object.keys(product.aiFields || {}).forEach((field) => {
+    if (product.aiFields[field] !== "pending") return;
+    if (LIST_FIELDS.includes(field)) {
+      product[field] = Array.isArray(previous[field]) ? previous[field].slice() : [];
+    } else {
+      product[field] = typeof previous[field] === "string" ? previous[field] : "";
+    }
+  });
+  product.aiDraft = false;
+  product.aiReviewed = false;
+  product.aiGeneratedAt = "";
+  product.aiModel = "";
+  product.aiSources = [];
+  product.aiFields = {};
+  product._aiPreviousValues = null;
+}
+
+function aiDraftErrorMessage(err) {
+  const msg = err?.message || String(err);
+  if (msg === "missing-openai-api-key") {
+    return "Falta configurar OPENAI_API_KEY en Firebase Functions.";
+  }
+  if (msg === "missing-ai-draft-endpoint") {
+    return "Falta configurar AI_DRAFT_ENDPOINT en firebase-config.js.";
+  }
+  if (msg === "missing-product-context") {
+    return "Agrega al menos SKU o nombre antes de completar con IA.";
+  }
+  if (msg === "forbidden") return "Tu usuario no tiene permisos para usar IA.";
+  if (msg === "unauthorized") return "La sesion expiro. Vuelve a iniciar sesion.";
+  if (msg === "openai-request-failed") return "OpenAI no pudo generar el borrador. Revisa la clave o intenta de nuevo.";
+  if (msg === "HTTP 404") return "La Function de IA aun no esta desplegada. Configura OPENAI_API_KEY y despliegala.";
+  if (msg === "empty-ai-response" || msg === "invalid-ai-response") {
+    return "La IA no devolvio un borrador valido. Intenta de nuevo.";
+  }
+  return "No se pudo completar con IA: " + msg;
 }
 
 function bindPriceFields(node, p) {
@@ -999,6 +1236,9 @@ function validate() {
     if (!sku) return "Hay un producto sin SKU. El SKU es obligatorio.";
     const key = sku.toLowerCase();
     if (seen.has(key)) return `SKU duplicado: "${sku}". Cada producto necesita un SKU unico.`;
+    if (hasPendingAiDraft(p)) {
+      return `El SKU "${sku}" tiene informacion IA pendiente. Apruebala o descartala antes de guardar.`;
+    }
     seen.add(key);
   }
   return null;
@@ -1022,6 +1262,14 @@ function toFirestore(p, orden) {
   out.escalasUnidades = (p.escalasUnidades || [])
     .map((e) => ({ desde: Number(e.desde) || 0, precio: Number(e.precio) || 0 }))
     .filter((e) => e.desde > 0 && e.precio > 0);
+  if (p.aiReviewed || p.aiSources?.length) {
+    out.aiDraft = p.aiDraft === true;
+    out.aiReviewed = p.aiReviewed === true;
+    out.aiGeneratedAt = p.aiGeneratedAt || "";
+    out.aiModel = p.aiModel || "";
+    out.aiSources = (p.aiSources || []).map(normalizeAiSource).filter((source) => source.url);
+    out.aiFields = normalizeAiFields(p.aiFields);
+  }
   return out;
 }
 

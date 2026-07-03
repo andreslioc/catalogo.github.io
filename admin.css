@@ -280,6 +280,62 @@
 }
 .btn-del:hover { background: #fee2e2; }
 
+.ai-draft-box {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ai-draft-box.is-pending {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+.ai-draft-box.is-reviewed {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+.ai-draft-main {
+  display: grid;
+  gap: 5px;
+  min-width: 220px;
+  flex: 1;
+}
+.ai-draft-status {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.ai-sources {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ai-sources a {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--accent);
+  font-size: 12px;
+  text-decoration: underline;
+}
+.ai-draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ai-draft-actions .btn {
+  padding: 7px 10px;
+  font-size: 12.5px;
+}
+
 .edit-grid {
   margin-top: 16px;
   display: grid;

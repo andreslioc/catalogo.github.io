@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Editar Catálogo · Admin</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="admin.css?v=20260702-2" />
+  <link rel="stylesheet" href="admin.css?v=20260703-2" />
 </head>
 <body class="admin">
   <div id="login" class="login-screen">
@@ -97,6 +97,18 @@
           </div>
         </div>
         <button class="btn-del" title="Eliminar producto">🗑</button>
+      </div>
+
+      <div class="ai-draft-box">
+        <div class="ai-draft-main">
+          <span class="ai-draft-status">Sin borrador IA</span>
+          <div class="ai-sources"></div>
+        </div>
+        <div class="ai-draft-actions">
+          <button type="button" class="btn btn-ghost btn-ai-generate">Completar con IA</button>
+          <button type="button" class="btn btn-primary btn-ai-approve">Aprobar info IA</button>
+          <button type="button" class="btn btn-ghost btn-ai-discard">Descartar IA</button>
+        </div>
       </div>
 
       <!-- Precios por volumen -->
@@ -195,6 +207,6 @@
 
   <datalist id="cat-list"></datalist>
 
-  <script type="module" src="admin.js?v=20260703-1"></script>
+  <script type="module" src="admin.js?v=20260703-2"></script>
 </body>
 </html>

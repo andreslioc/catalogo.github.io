@@ -33,6 +33,8 @@ export const NEON_IMPORT_ENDPOINT =
   "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/importCatalogProductFromSku";
 export const CLIENT_USER_ENDPOINT =
   "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/upsertCatalogClientUser";
+export const AI_DRAFT_ENDPOINT =
+  "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/generateCatalogProductDraft";
 
 export {
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,

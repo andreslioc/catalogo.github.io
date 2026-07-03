@@ -6,6 +6,8 @@ const { Pool } = require("pg");
 admin.initializeApp();
 
 const neonDatabaseUrl = defineSecret("NEON_DATABASE_URL");
+const openAiApiKey = defineSecret("OPENAI_API_KEY");
+const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
 let pool = null;
 
 exports.importCatalogProductFromSku = onRequest(
@@ -39,6 +41,38 @@ exports.importCatalogProductFromSku = onRequest(
       }
 
       res.status(200).json({ product: mapNeonRowToCatalogProduct(row, sku) });
+    } catch (err) {
+      sendError(res, err);
+    }
+  },
+);
+
+exports.generateCatalogProductDraft = onRequest(
+  {
+    region: "us-central1",
+    timeoutSeconds: 90,
+    memory: "512MiB",
+    secrets: [openAiApiKey],
+  },
+  async (req, res) => {
+    setCors(req, res);
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (req.method !== "POST") {
+      sendError(res, httpError(405, "method-not-allowed"));
+      return;
+    }
+
+    try {
+      await requireAdmin(req);
+      const product = normalizeAiProductInput(req.body?.product || {});
+      if (!product.sku && !product.nombre) throw httpError(400, "missing-product-context");
+
+      const result = await generateProductDraftWithAi(product);
+      res.status(200).json(result);
     } catch (err) {
       sendError(res, err);
     }
@@ -106,6 +140,243 @@ function requestSku(req) {
   const raw = req.method === "GET" ? req.query.sku : req.body?.sku;
   const value = Array.isArray(raw) ? raw[0] : raw;
   return String(value || "").trim();
+}
+
+function normalizeAiProductInput(raw) {
+  const source = raw || {};
+  const images = Array.isArray(source.imagenesCatalogo)
+    ? source.imagenesCatalogo
+    : source.imagen
+      ? [source.imagen]
+      : [];
+  return {
+    sku: cleanText(source.sku),
+    nombre: cleanText(source.nombre),
+    marca: cleanText(source.marca),
+    categoria: cleanText(source.categoria),
+    presentacion: cleanText(source.presentacion),
+    imagenesCatalogo: images.map(cleanText).filter(Boolean).slice(0, 4),
+  };
+}
+
+async function generateProductDraftWithAi(product) {
+  const apiKey = openAiApiKey.value() || process.env.OPENAI_API_KEY || "";
+  if (!apiKey || apiKey === "REPLACE_WITH_OPENAI_API_KEY") {
+    throw httpError(503, "missing-openai-api-key");
+  }
+
+  const model = process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL;
+  const payload = {
+    model,
+    store: false,
+    tools: [{ type: "web_search" }],
+    input: [
+      {
+        role: "system",
+        content: [
+          "Eres un asistente de catalogo para productos reales.",
+          "Genera un borrador en espanol neutro y comercial, pero solo con informacion verificable en fuentes web.",
+          "Usa busqueda web. Prioriza fabricante, marca oficial, ficha tecnica, etiqueta del producto o tienda oficial.",
+          "No inventes dosis, ingredientes, advertencias, concentraciones ni beneficios de salud.",
+          "Si un dato no aparece en fuentes confiables, deja el campo vacio o la lista vacia.",
+          "Evita promesas terapeuticas o diagnosticas; redacta beneficios como apoyo general cuando la fuente lo respalde.",
+          "Incluye fuentes consultadas con URL cuando existan.",
+        ].join(" "),
+      },
+      {
+        role: "user",
+        content: [
+          "Completa los campos faltantes para este producto del catalogo.",
+          "Devuelve JSON valido con el esquema solicitado.",
+          JSON.stringify(product, null, 2),
+        ].join("\n\n"),
+      },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: "catalog_product_ai_draft",
+        strict: true,
+        schema: catalogProductDraftSchema(),
+      },
+    },
+    max_output_tokens: 1800,
+  };
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    console.error("[generateCatalogProductDraft] OpenAI error", response.status, data?.error || data);
+    throw httpError(response.status === 401 ? 503 : 502, "openai-request-failed");
+  }
+  if (data.status === "incomplete") {
+    throw httpError(502, data.incomplete_details?.reason || "openai-incomplete-response");
+  }
+
+  const text = responseText(data);
+  if (!text) throw httpError(502, "empty-ai-response");
+
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    console.error("[generateCatalogProductDraft] invalid JSON", text);
+    throw httpError(502, "invalid-ai-response");
+  }
+
+  const draft = normalizeAiDraft(parsed);
+  const annotatedSources = responseSources(data);
+  const sources = mergeSources(draft.sources, annotatedSources);
+
+  return {
+    draft: {
+      presentacion: draft.presentacion,
+      descripcion: draft.descripcion,
+      beneficios: draft.beneficios,
+      ingredientes: draft.ingredientes,
+      dosis: draft.dosis,
+      modoUso: draft.modoUso,
+      advertencias: draft.advertencias,
+    },
+    sources,
+    confidence: draft.confidence,
+    notes: draft.notes,
+    model,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+function catalogProductDraftSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "presentacion",
+      "descripcion",
+      "beneficios",
+      "ingredientes",
+      "dosis",
+      "modoUso",
+      "advertencias",
+      "sources",
+      "confidence",
+      "notes",
+    ],
+    properties: {
+      presentacion: { type: "string" },
+      descripcion: { type: "string" },
+      beneficios: {
+        type: "array",
+        maxItems: 6,
+        items: { type: "string" },
+      },
+      ingredientes: {
+        type: "array",
+        maxItems: 16,
+        items: { type: "string" },
+      },
+      dosis: { type: "string" },
+      modoUso: { type: "string" },
+      advertencias: { type: "string" },
+      sources: {
+        type: "array",
+        maxItems: 8,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          required: ["title", "url", "kind"],
+          properties: {
+            title: { type: "string" },
+            url: { type: "string" },
+            kind: { type: "string" },
+          },
+        },
+      },
+      confidence: { type: "string", enum: ["alta", "media", "baja"] },
+      notes: { type: "string" },
+    },
+  };
+}
+
+function responseText(data) {
+  if (typeof data?.output_text === "string") return data.output_text.trim();
+  const chunks = [];
+  (data?.output || []).forEach((item) => {
+    if (typeof item?.text === "string") chunks.push(item.text);
+    (item?.content || []).forEach((content) => {
+      if (typeof content?.text === "string") chunks.push(content.text);
+    });
+  });
+  return chunks.join("").trim();
+}
+
+function responseSources(data) {
+  const sources = [];
+  (data?.output || []).forEach((item) => {
+    (item?.content || []).forEach((content) => {
+      (content?.annotations || []).forEach((annotation) => {
+        const url = cleanText(annotation?.url);
+        if (!url) return;
+        sources.push({
+          title: cleanText(annotation?.title) || url,
+          url,
+          kind: "web",
+        });
+      });
+    });
+  });
+  return sources;
+}
+
+function normalizeAiDraft(raw) {
+  return {
+    presentacion: cleanText(raw?.presentacion).slice(0, 160),
+    descripcion: cleanText(raw?.descripcion).slice(0, 900),
+    beneficios: cleanList(raw?.beneficios, 6, 120),
+    ingredientes: cleanList(raw?.ingredientes, 16, 120),
+    dosis: cleanText(raw?.dosis).slice(0, 220),
+    modoUso: cleanText(raw?.modoUso).slice(0, 420),
+    advertencias: cleanText(raw?.advertencias).slice(0, 520),
+    sources: normalizeSources(raw?.sources),
+    confidence: ["alta", "media", "baja"].includes(raw?.confidence) ? raw.confidence : "baja",
+    notes: cleanText(raw?.notes).slice(0, 500),
+  };
+}
+
+function cleanList(value, maxItems, maxLength) {
+  const source = Array.isArray(value) ? value : [];
+  return source.map(cleanText).filter(Boolean).slice(0, maxItems).map((item) => item.slice(0, maxLength));
+}
+
+function normalizeSources(value) {
+  const source = Array.isArray(value) ? value : [];
+  return source.map((item) => ({
+    title: cleanText(item?.title).slice(0, 140),
+    url: cleanText(item?.url).slice(0, 500),
+    kind: cleanText(item?.kind).slice(0, 80) || "web",
+  })).filter((item) => item.url);
+}
+
+function mergeSources(...groups) {
+  const byUrl = new Map();
+  groups.flat().forEach((source) => {
+    const url = cleanText(source?.url);
+    if (!url || byUrl.has(url)) return;
+    byUrl.set(url, {
+      title: cleanText(source?.title) || url,
+      url,
+      kind: cleanText(source?.kind) || "web",
+    });
+  });
+  return [...byUrl.values()].slice(0, 8);
 }
 
 async function upsertClientUser(body) {
@@ -421,7 +692,7 @@ function sendError(res, err) {
   }
   if (err?.code === "auth/invalid-email") err = httpError(400, "invalid-email");
   const status = Number(err?.status) || 500;
-  const expose = err?.expose !== false && status < 500;
+  const expose = err?.expose === true || (err?.expose !== false && status < 500);
   if (status >= 500) console.error("[importCatalogProductFromSku]", err);
   const body = { error: expose ? err.message : "internal-error" };
   if (Array.isArray(err?.suggestions) && err.suggestions.length) {
