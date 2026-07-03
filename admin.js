@@ -863,7 +863,9 @@ async function fetchNeonProduct(sku) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const msg = data?.error || data?.message || `HTTP ${res.status}`;
-    throw new Error(msg);
+    const err = new Error(msg);
+    if (Array.isArray(data?.suggestions)) err.suggestions = data.suggestions;
+    throw err;
   }
   if (!data?.product) throw new Error("Neon no devolvio un producto valido.");
   const rawProduct = { ...data.product };
@@ -973,7 +975,15 @@ function focusFirstProduct() {
 
 function importProductErrorMessage(err) {
   const msg = err?.message || String(err);
-  if (msg === "not-found") return "No se encontro ese SKU en Neon.";
+  if (msg === "not-found") {
+    const suggestions = Array.isArray(err?.suggestions)
+      ? err.suggestions.map((item) => item?.sku).filter(Boolean)
+      : [];
+    if (suggestions.length) {
+      return `No se encontro ese SKU en Neon. Similares: ${suggestions.join(", ")}.`;
+    }
+    return "No se encontro ese SKU en Neon.";
+  }
   if (msg === "missing-sku") return "Escribe un SKU para buscar en Neon.";
   if (msg === "forbidden") return "Tu usuario no tiene permisos para importar desde Neon.";
   if (msg === "unauthorized") return "La sesion expiro. Vuelve a iniciar sesion.";

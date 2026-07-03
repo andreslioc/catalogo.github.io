@@ -20,22 +20,56 @@ La Function busca por defecto en la vista:
 public.catalogo_productos_source
 ```
 
-La vista debe exponer una columna `sku`. Recomendado:
+La vista debe exponer una columna `sku`. En este proyecto la fuente real es
+`public."Product"` y los costos vienen de `public."ProductCost"`, por eso la
+vista compatible es:
 
 ```sql
 create or replace view public.catalogo_productos_source as
+with cost_rows as (
+  select
+    lower(trim(sku)) as sku_key,
+    coalesce(nullif("initialQty", 0), "availableQty", 0)::numeric as qty,
+    cost::numeric as cost
+  from public."ProductCost"
+  where sku is not null
+    and trim(sku) <> ''
+    and cost > 0
+    and coalesce(nullif("initialQty", 0), "availableQty", 0) > 0
+), cost_avg as (
+  select
+    sku_key,
+    round(sum(qty * cost) / nullif(sum(qty), 0))::numeric as weighted_cost
+  from cost_rows
+  group by sku_key
+), normalized as (
+  select
+    p.sku,
+    p.name as nombre,
+    p.brand as marca,
+    p.category as categoria,
+    p."imageUrl" as imagen,
+    coalesce(ca.weighted_cost, nullif(round(p."lastCost"), 0), 0)::numeric as "costoLlegada"
+  from public."Product" p
+  left join cost_avg ca on ca.sku_key = lower(trim(p.sku))
+  where p.sku is not null
+    and trim(p.sku) <> ''
+)
 select
   sku,
   nombre,
   marca,
   categoria,
-  presentacion,
-  descripcion,
-  imagen_url as imagen,
-  costo_llegada as "costoLlegada",
-  precio_venta as "precioBase"
-from public.tu_tabla_de_productos
-where sku is not null;
+  ''::text as presentacion,
+  ''::text as descripcion,
+  imagen,
+  "costoLlegada",
+  30::numeric as "margenSugeridoPct",
+  case
+    when "costoLlegada" > 0 then round("costoLlegada" * 1.3)::numeric
+    else 0::numeric
+  end as "precioBase"
+from normalized;
 ```
 
 Campos reconocidos por alias: `sku`, `nombre`, `marca`, `categoria`, `presentacion`, `descripcion`, `imagen`, `beneficios`, `ingredientes`, `dosis`, `modoUso`, `advertencias`, `costoLlegada`, `precioBase`, `margenSugeridoPct`, `imagenesCatalogo`, `escalasUnidades`.

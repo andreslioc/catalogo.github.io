@@ -33,7 +33,10 @@ exports.importCatalogProductFromSku = onRequest(
       if (!sku) throw httpError(400, "missing-sku");
 
       const row = await findNeonProduct(sku);
-      if (!row) throw httpError(404, "not-found");
+      if (!row) {
+        const suggestions = await findNeonProductSuggestions(sku);
+        throw httpError(404, "not-found", true, { suggestions });
+      }
 
       res.status(200).json({ product: mapNeonRowToCatalogProduct(row, sku) });
     } catch (err) {
@@ -180,12 +183,66 @@ async function upsertClientUser(body) {
 }
 
 async function findNeonProduct(sku) {
-  const source = quoteQualifiedIdentifier(
-    process.env.NEON_PRODUCT_SOURCE || "public.catalogo_productos_source",
-  );
+  const source = neonProductSource();
   const sql = `select * from ${source} where lower(sku::text) = lower($1) limit 1`;
   const result = await getPool().query(sql, [sku]);
   return result.rows[0] || null;
+}
+
+async function findNeonProductSuggestions(sku) {
+  const patterns = suggestionPatterns(sku);
+  if (!patterns.length) return [];
+
+  const source = neonProductSource();
+  const where = patterns
+    .map((_, index) => `sku::text ilike $${index + 1} escape '\\'`)
+    .join(" or ");
+  const sql = `
+    select *
+    from ${source}
+    where ${where}
+    order by sku::text
+    limit 6
+  `;
+  const result = await getPool().query(sql, patterns);
+  return result.rows.map((row) => {
+    const product = mapNeonRowToCatalogProduct(row, "");
+    return {
+      sku: product.sku,
+      nombre: product.nombre,
+      marca: product.marca,
+    };
+  });
+}
+
+function neonProductSource() {
+  return quoteQualifiedIdentifier(
+    process.env.NEON_PRODUCT_SOURCE || "public.catalogo_productos_source",
+  );
+}
+
+function suggestionPatterns(sku) {
+  const clean = String(sku || "").trim();
+  if (!clean) return [];
+
+  const values = new Set();
+  values.add(`${escapeLike(clean)}%`);
+
+  const withoutTrailingNumber = clean.replace(/[-_\s]*\d+$/, "");
+  if (withoutTrailingNumber.length >= 3 && withoutTrailingNumber !== clean) {
+    values.add(`${escapeLike(withoutTrailingNumber)}%`);
+  }
+
+  const firstChunk = clean.split(/[-_\s/]+/)[0];
+  if (firstChunk.length >= 3 && firstChunk !== clean && firstChunk !== withoutTrailingNumber) {
+    values.add(`${escapeLike(firstChunk)}%`);
+  }
+
+  return [...values];
+}
+
+function escapeLike(value) {
+  return String(value).replace(/[\\%_]/g, "\\$&");
 }
 
 function getPool() {
@@ -349,10 +406,11 @@ function parseJsonArray(value) {
   }
 }
 
-function httpError(status, message, expose = true) {
+function httpError(status, message, expose = true, details = {}) {
   const err = new Error(message);
   err.status = status;
   err.expose = expose;
+  Object.assign(err, details);
   return err;
 }
 
@@ -365,5 +423,9 @@ function sendError(res, err) {
   const status = Number(err?.status) || 500;
   const expose = err?.expose !== false && status < 500;
   if (status >= 500) console.error("[importCatalogProductFromSku]", err);
-  res.status(status).json({ error: expose ? err.message : "internal-error" });
+  const body = { error: expose ? err.message : "internal-error" };
+  if (Array.isArray(err?.suggestions) && err.suggestions.length) {
+    body.suggestions = err.suggestions;
+  }
+  res.status(status).json(body);
 }
