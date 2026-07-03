@@ -377,6 +377,8 @@ function openModal(p) {
   if (state.currentTurnTimer) clearTimeout(state.currentTurnTimer);
   state.currentTurnTimer = null;
   clearTurnSheet();
+  const carousel = document.getElementById("m-carousel");
+  if (carousel) carousel.innerHTML = "";
   renderCarousel();
   setText("m-name", p.nombre || p.sku);
   setText("m-sku", "SKU: " + p.sku);
@@ -423,18 +425,65 @@ function modalPageCount() {
 }
 
 function renderCarousel() {
+  renderPhotoPage();
+  updateCarouselChrome();
+  renderInfoBook();
+  preloadNeighborImages();
+}
+
+function updateCarouselChrome() {
   const wrap = document.getElementById("m-carousel");
   const prev = document.getElementById("m-img-prev");
   const next = document.getElementById("m-img-next");
-  const images = state.currentImages.length ? state.currentImages : [""];
   const total = modalPageCount();
-  const idx = state.currentImageIdx % images.length;
-  wrap.innerHTML = renderImagePage(images[idx], idx, images.length, "book-page active");
   wrap.dataset.page = `${state.currentImageIdx + 1} / ${total}`;
   prev.style.display = total > 1 ? "" : "none";
   next.style.display = total > 1 ? "" : "none";
-  renderInfoBook();
-  preloadNeighborImages();
+}
+
+// Swaps the photo half to the current page's image. If the URL didn't change
+// (products with one photo but several info pages) it is a no-op — replacing
+// the photo with itself is what caused it to blink.
+// Returns a promise that resolves once the new photo is painted, so callers
+// can keep a covering leaf in place until the hand-off is seamless.
+function renderPhotoPage(instant = false) {
+  const wrap = document.getElementById("m-carousel");
+  const images = state.currentImages.length ? state.currentImages : [""];
+  const idx = state.currentImageIdx % images.length;
+  const url = images[idx] || "";
+  const existing = wrap.querySelector(".book-page.active");
+  if (existing && wrap.dataset.url === url) return Promise.resolve();
+  wrap.dataset.url = url;
+  const oldPages = Array.from(wrap.querySelectorAll(".book-page"));
+  wrap.insertAdjacentHTML(
+    "beforeend",
+    renderImagePage(url, idx, images.length, instant ? "book-page active" : "book-page")
+  );
+  const fresh = wrap.lastElementChild;
+  const img = fresh.querySelector("img");
+  return new Promise((resolve) => {
+    let revealed = false;
+    // Only crossfade once the new photo is actually paintable: the outgoing
+    // page stays put underneath and is removed after the fade. No blank gap.
+    const reveal = () => {
+      if (revealed) return;
+      revealed = true;
+      if (!instant) {
+        fresh.getBoundingClientRect(); // flush styles so the transition runs
+        fresh.classList.add("active");
+      }
+      if (oldPages.length) setTimeout(() => oldPages.forEach((el) => el.remove()), instant ? 0 : 520);
+      // Give the browser two frames to actually put the pixels on screen.
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    };
+    if (img && !img.complete) {
+      img.addEventListener("load", reveal, { once: true });
+      img.addEventListener("error", reveal, { once: true });
+      setTimeout(reveal, 1500); // guard: never leave the page hidden forever
+    } else {
+      reveal();
+    }
+  });
 }
 
 // Resolves once the bitmap is downloaded AND decoded, so it can be painted in
@@ -473,25 +522,33 @@ function stepCarousel(delta) {
 
   const imgs = state.currentImages.length ? state.currentImages : [""];
   const destUrl = imgs[nextIdx % imgs.length];
+  const currUrl = imgs[previousIdx % imgs.length];
+  // On the stacked (mobile) layout the leaf swings out of view, so the photo
+  // below simply crossfades. On the two-page layout the leaf itself carries
+  // the photo: its back face IS the photo page that lands on the left half.
+  const stacked = window.matchMedia("(max-width: 760px)").matches;
 
-  // The turning leaf always lives on the info side (the half whose content
-  // actually changes). NEXT: the leaf carries the page we are leaving and
-  // lifts away over the spine, revealing the next page underneath. PREV: the
-  // leaf swings in from the spine carrying the previous page and settles flat.
-  renderTurnSheet(isNext ? previousIdx : nextIdx, isNext);
+  preloadImage(destUrl);
 
+  // The turning leaf lives on the info side. NEXT: its front carries the info
+  // page we are leaving and its back carries the INCOMING photo, which lands
+  // flat on the photo half — the photo arrives WITH the page turn. PREV: its
+  // back shows the CURRENT photo (so covering it is invisible) and lifts away
+  // to reveal the previous photo already swapped in underneath.
+  renderTurnSheet(isNext ? previousIdx : nextIdx, isNext, isNext ? destUrl : currUrl);
+
+  state.currentImageIdx = nextIdx;
   if (isNext) {
-    // Reveal the destination as soon as the leaf starts lifting, but wait for
-    // the new photo to be decoded so it fades in together with the turn
-    // instead of popping in after the animation already finished.
-    state.currentImageIdx = nextIdx;
-    preloadImage(destUrl).then(() => {
-      if (state.currentImageIdx === nextIdx) renderCarousel();
-    });
+    // The leaf lifts off the info half: the new info page must already be
+    // underneath. The photo half keeps the old photo — the leaf delivers it.
+    renderInfoBook();
+    if (stacked) renderPhotoPage();
   } else {
-    // PREV reveals at animation end; warm the bitmap now so it is ready by then.
-    preloadImage(destUrl);
+    // The leaf is covering the photo half: swap the photo under it now.
+    renderPhotoPage();
   }
+  updateCarouselChrome();
+  preloadNeighborImages();
 
   let done = false;
   const finish = () => {
@@ -501,11 +558,15 @@ function stepCarousel(delta) {
     state.currentTurnTimer = null;
     state.currentPrevImageIdx = null;
     if (els.turnSheet) els.turnSheet.removeEventListener("animationend", onEnd);
-    if (!isNext) {
-      state.currentImageIdx = nextIdx;
-      renderCarousel();
+    if (isNext && !stacked) {
+      // The leaf lies flat showing the new photo. Swap the real page under it
+      // and lift the sheet only once that page is painted — seamless hand-off.
+      // (If another turn already started, its sheet is live: don't clear it.)
+      renderPhotoPage(true).then(() => { if (!state.currentTurnTimer) clearTurnSheet(); });
+    } else {
+      renderInfoBook();
+      clearTurnSheet();
     }
-    clearTurnSheet();
   };
   const onEnd = (e) => { if (e.target === els.turnSheet) finish(); };
   els.turnSheet.addEventListener("animationend", onEnd);
@@ -521,7 +582,7 @@ function renderImagePage(url, index, total, cls) {
   `;
 }
 
-function renderTurnSheet(infoPageIndex, isNext) {
+function renderTurnSheet(infoPageIndex, isNext, backPhotoUrl) {
   if (!els.turnSheet || !state.current) return;
   const infoPages = productInfoPages(state.current);
   const infoPage = infoPages[infoPageIndex % infoPages.length];
@@ -538,11 +599,19 @@ function renderTurnSheet(infoPageIndex, isNext) {
     </div>
   `;
 
-  // Two-faced leaf: a solid front carrying the page content and a paper back,
-  // each with backface-visibility hidden so the swap across 90deg is seamless.
+  // Two-faced leaf: a solid front carrying the info page, and a back that IS
+  // the photo page — mirroring the real media pane's geometry so that when
+  // the leaf lands flat on the photo half the hand-off is pixel-identical.
+  const back = `
+    <div class="turn-page-media">
+      <div class="turn-image-wrap">
+        ${renderImagePage(backPhotoUrl || "", state.currentImageIdx, state.currentImages.length || 1, "book-page active")}
+      </div>
+    </div>
+  `;
   els.turnSheet.innerHTML = `
     <div class="turn-face turn-face-front">${front}</div>
-    <div class="turn-face turn-face-back" aria-hidden="true"></div>
+    <div class="turn-face turn-face-back" aria-hidden="true">${back}</div>
   `;
   els.turnSheet.hidden = false;
   els.turnSheet.className = `turn-sheet ${isNext ? "turn-next" : "turn-prev"}`;

@@ -341,14 +341,6 @@ body {
   padding: 18px;
   display: block;
   filter: drop-shadow(0 12px 16px rgba(15, 23, 42, 0.14));
-  animation: bookImgFadeIn 0.42s ease both;
-}
-@keyframes bookImgFadeIn {
-  from { opacity: 0; transform: scale(0.985); }
-  to { opacity: 1; transform: scale(1); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .book-page img { animation: none; }
 }
 .carousel-btn {
   position: absolute;
@@ -444,11 +436,23 @@ body {
   z-index: 1;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  padding-right: 8px;
   display: grid;
   align-content: start;
   gap: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 82, 35, 0.35) transparent;
 }
+.info-page-inner::-webkit-scrollbar { width: 6px; }
+.info-page-inner::-webkit-scrollbar-track { background: transparent; }
+.info-page-inner::-webkit-scrollbar-thumb {
+  background: rgba(120, 82, 35, 0.3);
+  border-radius: 999px;
+}
+.info-page-inner::-webkit-scrollbar-thumb:hover { background: rgba(120, 82, 35, 0.45); }
+/* The copy inside the turning leaf is decorative — never show a scrollbar there. */
+.turn-sheet .info-page-inner { overflow: hidden; }
 .info-eyebrow {
   margin: 0 0 2px;
   font-size: 11px;
@@ -472,18 +476,12 @@ body {
 }
 .info-block p {
   margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 .info-block ul {
   margin: 0;
   padding-left: 18px;
   display: grid;
   gap: 5px;
-  max-height: 126px;
-  overflow: hidden;
 }
 .info-page-count {
   position: relative;
@@ -843,6 +841,7 @@ body {
   .info-book { min-height: 210px; }
   .info-page { padding: 18px 20px 16px; }
   .turn-page-media { padding: 44px 34px; }
+  .turn-image-wrap { width: min(88%, 390px); }
   .turn-page-info { padding: 34px 32px 30px 38px; }
 }
 
@@ -869,8 +868,7 @@ body {
   .line-total { font-size: 12px; }
   .info-book { min-height: 160px; margin-top: 10px; }
   .info-page { padding: 15px 16px 13px; }
-  .info-block p { -webkit-line-clamp: 3; }
-  .info-block ul { max-height: 82px; gap: 3px; }
+  .info-block ul { gap: 3px; }
   .info-block p,
   .info-block li { font-size: 13px; line-height: 1.35; }
   .turn-sheet { width: 100%; }
@@ -923,8 +921,7 @@ body {
   .info-block h3 { font-size: 11px; margin-bottom: 4px; }
   .info-block p,
   .info-block li { font-size: 12px; line-height: 1.28; }
-  .info-block p { -webkit-line-clamp: 2; }
-  .info-block ul { max-height: 54px; gap: 2px; }
+  .info-block ul { gap: 2px; }
   .carousel-btn { width: 36px; height: 36px; font-size: 24px; }
   .turn-page-media { padding: 34px 28px 16px; }
   .turn-page-info { padding: 14px 16px 14px; }
