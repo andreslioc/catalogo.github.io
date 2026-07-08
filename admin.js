@@ -682,6 +682,9 @@ function aiDraftErrorMessage(err) {
   if (msg === "missing-openai-api-key") {
     return "Falta configurar OPENAI_API_KEY en Firebase Functions.";
   }
+  if (msg === "missing-gemini-api-key") {
+    return "Falta configurar GEMINI_API_KEY en Firebase Functions.";
+  }
   if (msg === "missing-ai-draft-endpoint") {
     return "Falta configurar AI_DRAFT_ENDPOINT en firebase-config.js.";
   }
@@ -691,7 +694,10 @@ function aiDraftErrorMessage(err) {
   if (msg === "forbidden") return "Tu usuario no tiene permisos para usar IA.";
   if (msg === "unauthorized") return "La sesion expiro. Vuelve a iniciar sesion.";
   if (msg === "openai-request-failed") return "OpenAI no pudo generar el borrador. Revisa la clave o intenta de nuevo.";
-  if (msg === "HTTP 404") return "La Function de IA aun no esta desplegada. Configura OPENAI_API_KEY y despliegala.";
+  if (msg === "gemini-request-failed") return "Gemini no pudo generar el borrador. Revisa la clave o intenta de nuevo.";
+  if (msg === "gemini-rate-limited") return "Gemini esta en limite temporal de cuota. Espera unos segundos e intenta de nuevo.";
+  if (msg === "Failed to fetch") return "La Function de IA no respondio. Voy a revisar si esta desplegada y con CORS activo.";
+  if (msg === "HTTP 404") return "La Function de IA aun no esta desplegada. Despliega generateCatalogProductDraft.";
   if (msg === "empty-ai-response" || msg === "invalid-ai-response") {
     return "La IA no devolvio un borrador valido. Intenta de nuevo.";
   }

@@ -6,8 +6,8 @@ const { Pool } = require("pg");
 admin.initializeApp();
 
 const neonDatabaseUrl = defineSecret("NEON_DATABASE_URL");
-const openAiApiKey = defineSecret("OPENAI_API_KEY");
-const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini";
+const geminiApiKey = defineSecret("GEMINI_API_KEY");
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 let pool = null;
 
 exports.importCatalogProductFromSku = onRequest(
@@ -52,7 +52,7 @@ exports.generateCatalogProductDraft = onRequest(
     region: "us-central1",
     timeoutSeconds: 90,
     memory: "512MiB",
-    secrets: [openAiApiKey],
+    secrets: [geminiApiKey],
   },
   async (req, res) => {
     setCors(req, res);
@@ -160,68 +160,48 @@ function normalizeAiProductInput(raw) {
 }
 
 async function generateProductDraftWithAi(product) {
-  const apiKey = openAiApiKey.value() || process.env.OPENAI_API_KEY || "";
-  if (!apiKey || apiKey === "REPLACE_WITH_OPENAI_API_KEY") {
-    throw httpError(503, "missing-openai-api-key");
+  const apiKey = geminiApiKey.value() || process.env.GEMINI_API_KEY || "";
+  if (!apiKey || apiKey === "REPLACE_WITH_GEMINI_API_KEY") {
+    throw httpError(503, "missing-gemini-api-key");
   }
 
-  const model = process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL;
+  const model = process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
   const payload = {
-    model,
-    store: false,
-    tools: [{ type: "web_search" }],
-    input: [
-      {
-        role: "system",
-        content: [
+    systemInstruction: {
+      role: "system",
+      parts: [{
+        text: [
           "Eres un asistente de catalogo para productos reales.",
-          "Genera un borrador en espanol neutro y comercial, pero solo con informacion verificable en fuentes web.",
-          "Usa busqueda web. Prioriza fabricante, marca oficial, ficha tecnica, etiqueta del producto o tienda oficial.",
-          "No inventes dosis, ingredientes, advertencias, concentraciones ni beneficios de salud.",
-          "Si un dato no aparece en fuentes confiables, deja el campo vacio o la lista vacia.",
-          "Evita promesas terapeuticas o diagnosticas; redacta beneficios como apoyo general cuando la fuente lo respalde.",
-          "Incluye fuentes consultadas con URL cuando existan.",
+          "Genera un borrador en espanol de Colombia, breve y comercial, usando solo datos razonablemente inferibles del SKU, nombre, marca, categoria e imagenes entregadas.",
+          "No inventes dosis, ingredientes, advertencias, concentraciones ni beneficios medicos especificos.",
+          "Si un dato sensible no esta claro, deja el campo vacio o la lista vacia.",
+          "Evita promesas terapeuticas o diagnosticas.",
+          "Devuelve exclusivamente JSON valido con el esquema solicitado.",
         ].join(" "),
-      },
+      }],
+    },
+    contents: [
       {
         role: "user",
-        content: [
-          "Completa los campos faltantes para este producto del catalogo.",
-          "Devuelve JSON valido con el esquema solicitado.",
-          JSON.stringify(product, null, 2),
-        ].join("\n\n"),
+        parts: [{
+          text: [
+            "Completa solo los campos faltantes para este producto del catalogo.",
+            "Si ya conoces informacion general segura, usala como borrador pendiente de revision humana.",
+            "Para dosis, modo de uso, ingredientes y advertencias: deja vacio si no tienes alta seguridad.",
+            JSON.stringify(product, null, 2),
+          ].join("\n\n"),
+        }],
       },
     ],
-    text: {
-      format: {
-        type: "json_schema",
-        name: "catalog_product_ai_draft",
-        strict: true,
-        schema: catalogProductDraftSchema(),
-      },
+    generationConfig: {
+      temperature: 0.25,
+      responseMimeType: "application/json",
+      responseSchema: geminiCatalogProductDraftSchema(),
     },
-    max_output_tokens: 1800,
   };
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    console.error("[generateCatalogProductDraft] OpenAI error", response.status, data?.error || data);
-    throw httpError(response.status === 401 ? 503 : 502, "openai-request-failed");
-  }
-  if (data.status === "incomplete") {
-    throw httpError(502, data.incomplete_details?.reason || "openai-incomplete-response");
-  }
-
-  const text = responseText(data);
+  const data = await callGemini(model, payload, apiKey);
+  const text = geminiResponseText(data);
   if (!text) throw httpError(502, "empty-ai-response");
 
   let parsed;
@@ -233,8 +213,6 @@ async function generateProductDraftWithAi(product) {
   }
 
   const draft = normalizeAiDraft(parsed);
-  const annotatedSources = responseSources(data);
-  const sources = mergeSources(draft.sources, annotatedSources);
 
   return {
     draft: {
@@ -246,11 +224,106 @@ async function generateProductDraftWithAi(product) {
       modoUso: draft.modoUso,
       advertencias: draft.advertencias,
     },
-    sources,
+    sources: draft.sources,
     confidence: draft.confidence,
     notes: draft.notes,
     model,
+    provider: "gemini",
     generatedAt: new Date().toISOString(),
+  };
+}
+
+async function callGemini(model, payload, apiKey) {
+  const models = model === "gemini-2.5-flash"
+    ? [model]
+    : [model, "gemini-2.5-flash"];
+  let lastError = null;
+
+  for (const candidate of models) {
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(candidate)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) return data;
+
+      lastError = { status: response.status, data };
+      if (![408, 425, 429, 500, 502, 503, 504].includes(response.status)) break;
+      if (attempt < 4) {
+        await sleep(geminiRetryDelayMs(data, attempt));
+      }
+    }
+  }
+
+  console.error("[generateCatalogProductDraft] Gemini error", lastError);
+  const message = lastError?.status === 429 ? "gemini-rate-limited" : "gemini-request-failed";
+  throw httpError(lastError?.status === 401 || lastError?.status === 403 ? 503 : 502, message);
+}
+
+function geminiResponseText(data) {
+  return String(data?.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
+}
+
+function geminiRetryDelayMs(data, attempt) {
+  const msg = String(data?.error?.message || "");
+  const match = msg.match(/retry in\s+([\d.]+)s/i);
+  if (match) {
+    return Math.min(25000, Math.ceil(Number(match[1]) * 1000) + 500);
+  }
+  return Math.min(15000, 750 * 2 ** (attempt - 1) + Math.floor(Math.random() * 300));
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function geminiCatalogProductDraftSchema() {
+  return {
+    type: "object",
+    properties: {
+      presentacion: { type: "string" },
+      descripcion: { type: "string" },
+      beneficios: {
+        type: "array",
+        items: { type: "string" },
+      },
+      ingredientes: {
+        type: "array",
+        items: { type: "string" },
+      },
+      dosis: { type: "string" },
+      modoUso: { type: "string" },
+      advertencias: { type: "string" },
+      sources: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            url: { type: "string" },
+            kind: { type: "string" },
+          },
+          required: ["title", "url", "kind"],
+        },
+      },
+      confidence: { type: "string", enum: ["alta", "media", "baja"] },
+      notes: { type: "string" },
+    },
+    required: [
+      "presentacion",
+      "descripcion",
+      "beneficios",
+      "ingredientes",
+      "dosis",
+      "modoUso",
+      "advertencias",
+      "sources",
+      "confidence",
+      "notes",
+    ],
   };
 }
 
@@ -304,36 +377,6 @@ function catalogProductDraftSchema() {
       notes: { type: "string" },
     },
   };
-}
-
-function responseText(data) {
-  if (typeof data?.output_text === "string") return data.output_text.trim();
-  const chunks = [];
-  (data?.output || []).forEach((item) => {
-    if (typeof item?.text === "string") chunks.push(item.text);
-    (item?.content || []).forEach((content) => {
-      if (typeof content?.text === "string") chunks.push(content.text);
-    });
-  });
-  return chunks.join("").trim();
-}
-
-function responseSources(data) {
-  const sources = [];
-  (data?.output || []).forEach((item) => {
-    (item?.content || []).forEach((content) => {
-      (content?.annotations || []).forEach((annotation) => {
-        const url = cleanText(annotation?.url);
-        if (!url) return;
-        sources.push({
-          title: cleanText(annotation?.title) || url,
-          url,
-          kind: "web",
-        });
-      });
-    });
-  });
-  return sources;
 }
 
 function normalizeAiDraft(raw) {
