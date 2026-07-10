@@ -606,7 +606,18 @@ function mapNeonRowToCatalogProduct(row, fallbackSku) {
     beneficios: parseList(get(["beneficios", "benefits"])),
     ingredientes: parseList(get(["ingredientes", "ingredients"])),
     imagen: cleanText(get(["imagen", "image", "image_url", "imagen_url", "foto", "photo_url", "main_image_url"])),
-    costoLlegada: parseCurrency(get(["costoLlegada", "costo_llegada", "costo", "cost", "landed_cost", "costo_total"])),
+    costoLlegada: parseCurrency(get([
+      "costoLlegada",
+      "costo_llegada",
+      "costoLlegadaCop",
+      "costo_llegada_cop",
+      "costo llegada COP",
+      "costo",
+      "cost",
+      "landed_cost",
+      "landed_cost_cop",
+      "costo_total",
+    ])),
     precioBase: parseCurrency(get(["precioBase", "precio_base", "precio", "price", "sale_price", "precio_venta", "precio_sugerido"])),
     margenSugeridoPct: parseDecimal(get(["margenSugeridoPct", "margen_sugerido_pct", "margen", "margin_pct"])),
     escalasUnidades: parseTiers(get(["escalasUnidades", "escalas_unidades", "volume_prices", "price_tiers"])),
@@ -617,6 +628,15 @@ function mapNeonRowToCatalogProduct(row, fallbackSku) {
   );
   if (product.imagen && !product.imagenesCatalogo.includes(product.imagen)) {
     product.imagenesCatalogo.unshift(product.imagen);
+  }
+
+  // Neon puede exponer solamente el costo de llegada. En ese caso usamos el
+  // margen importado (30 % por defecto) para que el producto nuevo no quede
+  // publicado sin un precio base calculable.
+  if (product.costoLlegada > 0 && product.precioBase <= 0) {
+    const margin = product.margenSugeridoPct > 0 ? product.margenSugeridoPct : 30;
+    product.margenSugeridoPct = margin;
+    product.precioBase = Math.round(product.costoLlegada * (1 + margin / 100));
   }
 
   return product;
