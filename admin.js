@@ -694,8 +694,12 @@ function aiDraftErrorMessage(err) {
   if (msg === "forbidden") return "Tu usuario no tiene permisos para usar IA.";
   if (msg === "unauthorized") return "La sesion expiro. Vuelve a iniciar sesion.";
   if (msg === "openai-request-failed") return "OpenAI no pudo generar el borrador. Revisa la clave o intenta de nuevo.";
-  if (msg === "gemini-request-failed") return "Gemini no pudo generar el borrador. Revisa la clave o intenta de nuevo.";
-  if (msg === "gemini-rate-limited") return "Gemini esta en limite temporal de cuota. Espera unos segundos e intenta de nuevo.";
+  if (msg === "gemini-request-failed") {
+    return "Gemini no pudo generar el borrador (modelo saturado o no disponible). Intenta de nuevo en unos segundos.";
+  }
+  if (msg === "gemini-rate-limited") {
+    return "Gemini alcanzo el limite temporal de cuota en todos los modelos libres. Espera unos segundos e intenta de nuevo.";
+  }
   if (msg === "Failed to fetch") return "La Function de IA no respondio. Voy a revisar si esta desplegada y con CORS activo.";
   if (msg === "HTTP 404") return "La Function de IA aun no esta desplegada. Despliega generateCatalogProductDraft.";
   if (msg === "empty-ai-response" || msg === "invalid-ai-response") {

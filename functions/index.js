@@ -7,7 +7,13 @@ admin.initializeApp();
 
 const neonDatabaseUrl = defineSecret("NEON_DATABASE_URL");
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+// Prefer lite first: 3.5 often returns 503 high-demand on free tier.
+const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
+const GEMINI_FALLBACK_MODELS = [
+  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash",
+  "gemini-flash-latest",
+];
 let pool = null;
 
 exports.importCatalogProductFromSku = onRequest(
@@ -171,10 +177,12 @@ async function generateProductDraftWithAi(product) {
       role: "system",
       parts: [{
         text: [
-          "Eres un asistente de catalogo para productos reales.",
-          "Genera un borrador en espanol de Colombia, breve y comercial, usando solo datos razonablemente inferibles del SKU, nombre, marca, categoria e imagenes entregadas.",
-          "No inventes dosis, ingredientes, advertencias, concentraciones ni beneficios medicos especificos.",
-          "Si un dato sensible no esta claro, deja el campo vacio o la lista vacia.",
+          "Eres un asistente de catalogo para productos reales de suplementos, salud, belleza, bebes y alimentos.",
+          "Genera un borrador en espanol de Colombia, breve y comercial.",
+          "Debes completar TODOS los campos del esquema para revision humana: presentacion, descripcion, beneficios, ingredientes, dosis, modoUso y advertencias.",
+          "Usa conocimiento general seguro del producto/marca cuando sea razonable; marca confidence media o baja si no tienes ficha oficial.",
+          "No inventes concentraciones numericas exactas ni beneficios medicos diagnosticos.",
+          "Si un dato es incierto, escribe un borrador prudente y generico (no dejes el campo vacio salvo que sea imposible).",
           "Evita promesas terapeuticas o diagnosticas.",
           "Devuelve exclusivamente JSON valido con el esquema solicitado.",
         ].join(" "),
@@ -185,22 +193,22 @@ async function generateProductDraftWithAi(product) {
         role: "user",
         parts: [{
           text: [
-            "Completa solo los campos faltantes para este producto del catalogo.",
-            "Si ya conoces informacion general segura, usala como borrador pendiente de revision humana.",
-            "Para dosis, modo de uso, ingredientes y advertencias: deja vacio si no tienes alta seguridad.",
+            "Completa los campos del producto para el catalogo. El humano revisara y aprobara antes de guardar.",
+            "Prioriza rellenar campos vacios. Incluye dosis, modo de uso, ingredientes y advertencias con redaccion prudente si conoces el tipo de producto.",
+            "Devuelve texto util en cada campo; evita strings vacios y listas vacias cuando puedas inferir algo seguro.",
             JSON.stringify(product, null, 2),
           ].join("\n\n"),
         }],
       },
     ],
     generationConfig: {
-      temperature: 0.25,
+      temperature: 0.35,
       responseMimeType: "application/json",
       responseSchema: geminiCatalogProductDraftSchema(),
     },
   };
 
-  const data = await callGemini(model, payload, apiKey);
+  const { data, model: usedModel } = await callGemini(model, payload, apiKey);
   const text = geminiResponseText(data);
   if (!text) throw httpError(502, "empty-ai-response");
 
@@ -227,20 +235,38 @@ async function generateProductDraftWithAi(product) {
     sources: draft.sources,
     confidence: draft.confidence,
     notes: draft.notes,
-    model,
+    model: usedModel,
     provider: "gemini",
     generatedAt: new Date().toISOString(),
   };
 }
 
+function geminiModelCandidates(preferred) {
+  const ordered = [preferred, ...GEMINI_FALLBACK_MODELS];
+  return [...new Set(ordered.map((m) => String(m || "").trim()).filter(Boolean))];
+}
+
+function shouldTryNextGeminiModel(status) {
+  // 404 = model removed/unavailable; 429/5xx = quota or saturation.
+  return [404, 408, 425, 429, 500, 502, 503, 504].includes(status);
+}
+
+function shouldSkipRetriesForGemini(status, data) {
+  const msg = String(data?.error?.message || "").toLowerCase();
+  if (status === 404) return true;
+  // High demand / overload: switch model immediately instead of waiting on the same one.
+  if (status === 503 && (msg.includes("high demand") || msg.includes("overloaded") || msg.includes("try again later"))) {
+    return true;
+  }
+  return false;
+}
+
 async function callGemini(model, payload, apiKey) {
-  const models = model === "gemini-2.5-flash"
-    ? [model]
-    : [model, "gemini-2.5-flash"];
+  const models = geminiModelCandidates(model);
   let lastError = null;
 
   for (const candidate of models) {
-    for (let attempt = 1; attempt <= 4; attempt++) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(candidate)}:generateContent?key=${encodeURIComponent(apiKey)}`;
       const response = await fetch(url, {
         method: "POST",
@@ -248,14 +274,30 @@ async function callGemini(model, payload, apiKey) {
         body: JSON.stringify(payload),
       });
       const data = await response.json().catch(() => ({}));
-      if (response.ok) return data;
+      if (response.ok) return { data, model: candidate };
 
-      lastError = { status: response.status, data };
-      if (![408, 425, 429, 500, 502, 503, 504].includes(response.status)) break;
-      if (attempt < 4) {
+      lastError = { status: response.status, model: candidate, data };
+      console.warn(
+        "[generateCatalogProductDraft] Gemini candidate failed",
+        candidate,
+        response.status,
+        data?.error?.message || data?.error || "",
+      );
+
+      // Auth errors: same key on every free model — fail fast.
+      if (response.status === 401 || response.status === 403) {
+        break;
+      }
+
+      // Model gone or saturated — jump to next free-tier model now.
+      if (shouldSkipRetriesForGemini(response.status, data)) break;
+
+      if (!shouldTryNextGeminiModel(response.status)) break;
+      if (attempt < 2) {
         await sleep(geminiRetryDelayMs(data, attempt));
       }
     }
+    if (lastError?.status === 401 || lastError?.status === 403) break;
   }
 
   console.error("[generateCatalogProductDraft] Gemini error", lastError);

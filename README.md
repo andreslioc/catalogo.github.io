@@ -120,7 +120,10 @@ firebase deploy --only functions:generateCatalogProductDraft
 ```
 
 Opcionalmente se puede fijar un modelo distinto al predeterminado
-`gemini-2.5-flash` usando `GEMINI_MODEL` en el entorno de Functions.
+`gemini-3.1-flash-lite` usando `GEMINI_MODEL` en el entorno de Functions.
+Si ese modelo responde 404 (descontinuado) o satura cuota/demanda (429/503),
+la Function prueba en orden otros modelos free-tier:
+`gemini-3.5-flash` y `gemini-flash-latest`.
 
 ## Subcatalogos por cliente
 
