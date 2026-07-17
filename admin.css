@@ -280,6 +280,20 @@
 }
 .btn-del:hover { background: #fee2e2; }
 
+.edit-stock {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: #fff;
+}
+.edit-stock.stock-ok { background: #0f766e; }
+.edit-stock.stock-low { background: #ca8a04; }
+.edit-stock.stock-out { background: #64748b; }
+
 .ai-draft-box {
   margin-top: 14px;
   padding: 10px 12px;

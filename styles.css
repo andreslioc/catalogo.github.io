@@ -177,6 +177,7 @@ body {
   border-color: rgba(15, 118, 110, 0.28);
 }
 .card-media {
+  position: relative;
   aspect-ratio: 1 / 1;
   background:
     linear-gradient(180deg, #ffffff, #eef7f5);
@@ -211,6 +212,61 @@ body {
 .card-sku { font-size: 12px; color: var(--ink-soft); margin-top: auto; }
 .card-precio { font-size: 16px; font-weight: 800; color: var(--brand); margin-top: 4px; }
 .precio { font-size: 22px; font-weight: 700; color: var(--brand); margin: 0 0 4px; }
+
+/* ---------------- Inventario / disponibilidad ---------------- */
+.stock-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
+  backdrop-filter: saturate(1.2);
+}
+.stock-badge.stock-ok { background: rgba(15, 118, 110, 0.92); }
+.stock-badge.stock-low { background: rgba(202, 138, 4, 0.95); }
+.stock-badge.stock-out { background: rgba(100, 116, 139, 0.95); }
+.card-agotado .card-media img { opacity: 0.5; filter: grayscale(0.6) drop-shadow(0 10px 12px rgba(15, 23, 42, 0.12)); }
+.card-agotado .card-name { color: var(--ink-soft); }
+
+.stock-line {
+  margin: 2px 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.stock-line.stock-ok { color: var(--brand); }
+.stock-line.stock-low { color: #b45309; }
+.stock-line.stock-out { color: #64748b; }
+
+.cart-row-warn { margin: 0 0 6px; font-size: 11px; font-weight: 700; color: #b45309; }
+.cart-row-excede { background: #fffbeb; border-radius: 10px; }
+
+/* Toast */
+.catalog-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translate(-50%, 20px);
+  z-index: 200;
+  max-width: min(90vw, 420px);
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: #0f172a;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.catalog-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.catalog-toast.is-error { background: #b91c1c; }
 
 .empty { text-align: center; color: var(--ink-soft); padding: 60px 0; }
 

@@ -1,5 +1,5 @@
 import {
-  db, auth, storage, COLLECTION, CLIENTS_COLLECTION, NEON_IMPORT_ENDPOINT, CLIENT_USER_ENDPOINT, AI_DRAFT_ENDPOINT,
+  db, auth, storage, COLLECTION, CLIENTS_COLLECTION, NEON_IMPORT_ENDPOINT, CLIENT_USER_ENDPOINT, AI_DRAFT_ENDPOINT, CATALOG_STOCK_ENDPOINT,
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signOut, onAuthStateChanged, getIdTokenResult,
   storageRef, uploadBytesResumable, getDownloadURL,
@@ -36,7 +36,9 @@ const state = {
   search: "",
   dirty: false,
   storageUploadUnavailable: false,
+  stock: {},            // { [sku]: unidades disponibles } (Neon, vía Cloud Function)
 };
+const STOCK_LOW_THRESHOLD = 5;
 const els = {};
 let authResolved = false;
 const ADMIN_ENTRY_KEY = "catalogAdminEntry";
@@ -127,6 +129,65 @@ async function startApp() {
   renderClients();
   renderRules();
   render();
+  loadStock(); // no bloquea; repinta badges cuando llega
+}
+
+/* ---------------- INVENTARIO (Neon) ---------------- */
+
+async function loadStock() {
+  if (!CATALOG_STOCK_ENDPOINT) return;
+  const skus = [...new Set(state.products.map((p) => String(p.sku || "").trim()).filter(Boolean))];
+  if (!skus.length) return;
+  try {
+    const res = await fetch(new URL(CATALOG_STOCK_ENDPOINT, window.location.href).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ skus }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+    state.stock = data?.stock && typeof data.stock === "object" ? data.stock : {};
+    // Actualiza solo los badges, sin reconstruir filas (para no perder ediciones).
+    updateStockBadges();
+  } catch (err) {
+    console.warn("[stock]", err);
+  }
+}
+
+function stockFor(sku) {
+  const key = String(sku || "").trim();
+  if (!key || !state.stock) return null;
+  const v = state.stock[key];
+  return typeof v === "number" ? v : null;
+}
+
+function applyStockBadge(el, units) {
+  if (!el) return;
+  if (units == null) {
+    el.hidden = true;
+    el.textContent = "";
+    el.className = "edit-stock";
+    return;
+  }
+  el.hidden = false;
+  if (units <= 0) {
+    el.textContent = "Agotado";
+    el.className = "edit-stock stock-out";
+  } else if (units <= STOCK_LOW_THRESHOLD) {
+    el.textContent = `Últimas ${units}`;
+    el.className = "edit-stock stock-low";
+  } else {
+    el.textContent = `Disp: ${units}`;
+    el.className = "edit-stock stock-ok";
+  }
+}
+
+// Recorre las filas ya renderizadas y refresca su badge según el SKU actual.
+function updateStockBadges() {
+  els.editor.querySelectorAll(".edit-card").forEach((card) => {
+    const sku = card.querySelector(".f-sku")?.value?.trim();
+    applyStockBadge(card.querySelector(".edit-stock"), stockFor(sku));
+  });
 }
 
 function cacheEls() {
@@ -461,6 +522,9 @@ function buildRow(p) {
   };
   setThumb(p.imagen);
 
+  const stockBadge = node.querySelector(".edit-stock");
+  applyStockBadge(stockBadge, stockFor(p.sku));
+
   TEXT_FIELDS.forEach((f) => {
     const input = node.querySelector(".f-" + f);
     if (!input) return;
@@ -468,6 +532,7 @@ function buildRow(p) {
     input.addEventListener("input", () => {
       p[f] = input.value;
       if (f === "imagen") setThumb(input.value.trim());
+      if (f === "sku") applyStockBadge(stockBadge, stockFor(input.value));
       markDirty();
     });
   });

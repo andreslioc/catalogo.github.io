@@ -1,5 +1,5 @@
 import {
-  db, auth, COLLECTION, CLIENTS_COLLECTION,
+  db, auth, COLLECTION, CLIENTS_COLLECTION, CATALOG_STOCK_ENDPOINT,
   collection, getDocs, getDoc, doc, query, orderBy,
   signInWithEmailAndPassword, getIdTokenResult, signOut, setPersistence, browserLocalPersistence,
 } from "./firebase-config.js?v=20260702-2";
@@ -26,7 +26,12 @@ const state = {
   catalogUnavailable: false,
   priceOverrides: new Map(),
   cart: {},             // { [sku]: cantidad }
+  stock: {},            // { [sku]: unidades disponibles } (Neon, vía Cloud Function)
+  currentStock: null,   // stock del producto abierto en el modal (null = desconocido)
 };
+
+// Umbral para avisar "últimas unidades" en badges.
+const STOCK_LOW_THRESHOLD = 5;
 
 const els = {
   grid: document.getElementById("grid"),
@@ -91,6 +96,134 @@ async function init() {
   applyFilters();
   els.footerCount.textContent = state.all.length;
   renderCart();
+  loadStock(); // no bloquea el primer render; repinta cuando llega
+}
+
+/* ---------------- INVENTARIO (Neon) ---------------- */
+
+// Consulta las existencias de todos los SKUs del catálogo y repinta.
+// Si falla, el catálogo sigue funcionando sin datos de stock (degradación suave).
+async function loadStock() {
+  if (!CATALOG_STOCK_ENDPOINT) return;
+  const skus = [...new Set(state.all.map((p) => String(p.sku || "").trim()).filter(Boolean))];
+  if (!skus.length) return;
+  try {
+    state.stock = await fetchStock(skus);
+    render();
+  } catch (err) {
+    console.warn("[stock]", err);
+  }
+}
+
+async function fetchStock(skus) {
+  const res = await fetch(new URL(CATALOG_STOCK_ENDPOINT, window.location.href).toString(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ skus }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+  return data?.stock && typeof data.stock === "object" ? data.stock : {};
+}
+
+// Unidades disponibles de un SKU, o null si aún no se conocen.
+function stockFor(sku) {
+  const key = String(sku || "").trim();
+  if (!key || !state.stock) return null;
+  const v = state.stock[key];
+  return typeof v === "number" ? v : null;
+}
+
+function renderStockBadge(units) {
+  if (units == null) return "";
+  if (units <= 0) return '<span class="stock-badge stock-out">Agotado</span>';
+  if (units <= STOCK_LOW_THRESHOLD) {
+    return `<span class="stock-badge stock-low">Últimas ${units} ${units === 1 ? "unidad" : "unidades"}</span>`;
+  }
+  return `<span class="stock-badge stock-ok">Disponibles: ${units}</span>`;
+}
+
+// Re-consulta un SKU puntual (momento decisivo: abrir el modal) para refrescar
+// el número aunque algo se haya vendido en MercadoLibre desde la carga inicial.
+async function refreshStockFor(sku) {
+  const key = String(sku || "").trim();
+  if (!key || !CATALOG_STOCK_ENDPOINT) return;
+  try {
+    const map = await fetchStock([key]);
+    if (typeof map[key] === "number") {
+      state.stock[key] = map[key];
+      // Solo actualiza el modal si sigue abierto en el mismo producto.
+      if (state.current && state.current.sku === key) applyModalStock(map[key]);
+    }
+  } catch (err) {
+    console.warn("[stock-refresh]", err);
+  }
+}
+
+// Refleja el stock en el modal: leyenda, tope de cantidad y bloqueo si agotado.
+function applyModalStock(units) {
+  state.currentStock = units;
+  const line = document.getElementById("m-stock");
+  const qty = document.getElementById("m-qty");
+  const addBtn = document.getElementById("m-add");
+  const steppers = document.querySelectorAll("#m-cotizar .qty-stepper button");
+
+  if (line) {
+    if (units == null) {
+      line.hidden = true;
+      line.textContent = "";
+      line.className = "stock-line";
+    } else if (units <= 0) {
+      line.hidden = false;
+      line.textContent = "Agotado — sin unidades disponibles";
+      line.className = "stock-line stock-out";
+    } else {
+      line.hidden = false;
+      line.textContent = units <= STOCK_LOW_THRESHOLD
+        ? `Últimas ${units} ${units === 1 ? "unidad disponible" : "unidades disponibles"}`
+        : `${units} unidades disponibles`;
+      line.className = `stock-line ${units <= STOCK_LOW_THRESHOLD ? "stock-low" : "stock-ok"}`;
+    }
+  }
+
+  const agotado = units != null && units <= 0;
+  if (qty) {
+    if (units != null && units > 0) {
+      qty.max = String(units);
+      if ((parseInt(qty.value, 10) || 1) > units) qty.value = String(units);
+    } else {
+      qty.removeAttribute("max");
+    }
+    qty.disabled = agotado;
+  }
+  if (addBtn) {
+    addBtn.disabled = agotado;
+    addBtn.textContent = agotado ? "Agotado" : "Agregar a cotización";
+  }
+  steppers.forEach((b) => { b.disabled = agotado; });
+}
+
+// Recorta una cantidad al stock disponible (si se conoce).
+function clampToStock(qty) {
+  const s = state.currentStock;
+  if (typeof s === "number" && s >= 0) return Math.max(0, Math.min(qty, s));
+  return qty;
+}
+
+let toastTimer = null;
+function toast(msg, isError = false) {
+  let el = document.getElementById("catalog-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "catalog-toast";
+    el.className = "catalog-toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.toggle("is-error", !!isError);
+  el.classList.add("show");
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
 }
 
 function openAdminLoginFromQuery() {
@@ -342,6 +475,8 @@ function render() {
     card.className = "card";
     const precioTxt = tienePrecio(p) ? `${money(p.precioBase)}${state.client ? "" : " sugerido"}` : "";
     const img = productImages(p)[0];
+    const units = stockFor(p.sku);
+    if (units === 0) card.classList.add("card-agotado");
     card.innerHTML = `
       <div class="card-media">
         ${
@@ -349,6 +484,7 @@ function render() {
             ? `<img src="${escapeAttr(img)}" alt="${escapeAttr(p.nombre)}" loading="lazy" onerror="this.parentNode.innerHTML='<span class=&quot;ph&quot;>Sin imagen</span>'" />`
             : '<span class="ph">Sin imagen</span>'
         }
+        ${renderStockBadge(units)}
       </div>
       <div class="card-body">
         ${p.marca ? `<span class="card-brand">${escapeHtml(p.marca)}</span>` : ""}
@@ -394,7 +530,9 @@ function openModal(p) {
     precioEl.style.display = "";
     renderEscalas(p);
     document.getElementById("m-qty").value = state.cart[p.sku] || 1;
+    applyModalStock(stockFor(p.sku));
     refreshModalLineTotal();
+    refreshStockFor(p.sku); // re-consulta fresca al abrir (por ventas en ML)
   } else {
     cotizar.style.display = "none";
     precioEl.textContent = "";
@@ -743,12 +881,17 @@ function renderEscalas(p) {
 }
 
 function currentQty() {
-  return Math.max(1, parseInt(document.getElementById("m-qty").value, 10) || 1);
+  const raw = Math.max(1, parseInt(document.getElementById("m-qty").value, 10) || 1);
+  const capped = clampToStock(raw);
+  return Math.max(1, capped);
 }
 
 function stepQty(delta) {
   const input = document.getElementById("m-qty");
-  input.value = Math.max(1, (parseInt(input.value, 10) || 1) + delta);
+  let next = Math.max(1, (parseInt(input.value, 10) || 1) + delta);
+  const s = state.currentStock;
+  if (typeof s === "number" && s > 0) next = Math.min(next, s);
+  input.value = next;
   refreshModalLineTotal();
 }
 
@@ -764,7 +907,17 @@ function refreshModalLineTotal() {
 function addCurrentToCart() {
   const p = state.current;
   if (!p) return;
-  state.cart[p.sku] = currentQty();
+  const s = state.currentStock;
+  if (typeof s === "number" && s <= 0) {
+    toast("Este producto está agotado.", true);
+    return;
+  }
+  let qty = currentQty();
+  if (typeof s === "number" && qty > s) {
+    qty = s;
+    toast(`Solo hay ${s} ${s === 1 ? "unidad disponible" : "unidades disponibles"}. Ajustamos la cantidad.`, true);
+  }
+  state.cart[p.sku] = qty;
   saveCart();
   renderCart();
   closeModal();
@@ -814,7 +967,9 @@ function cartLines() {
       const p = state.all.find((x) => x.sku === sku);
       if (!p) return null;
       const unit = precioUnitario(p, qty);
-      return { p, qty, unit, total: unit * qty };
+      const stock = stockFor(sku);
+      const excede = typeof stock === "number" && qty > stock;
+      return { p, qty, unit, total: unit * qty, stock, excede };
     })
     .filter(Boolean);
 }
@@ -839,6 +994,7 @@ function renderCart() {
       <div class="cart-row-main">
         <p class="cart-row-name">${escapeHtml(l.p.nombre || l.p.sku)}</p>
         <p class="cart-row-unit">${money(l.unit)} c/u</p>
+        ${l.excede ? `<p class="cart-row-warn">⚠ Solo ${l.stock} ${l.stock === 1 ? "disponible" : "disponibles"}</p>` : ""}
         <div class="qty-stepper sm">
           <button type="button" data-dec aria-label="Quitar">−</button>
           <input type="number" min="1" value="${l.qty}" data-qty-input />
@@ -847,6 +1003,7 @@ function renderCart() {
         </div>
       </div>
       <div class="cart-row-total">${money(l.total)}</div>`;
+    if (l.excede) row.classList.add("cart-row-excede");
 
     const sku = l.p.sku;
     row.querySelector("[data-dec]").addEventListener("click", () => bumpQty(sku, -1));

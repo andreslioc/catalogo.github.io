@@ -1,5 +1,6 @@
 const admin = require("firebase-admin");
 const { onRequest } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { defineSecret } = require("firebase-functions/params");
 const { Pool } = require("pg");
 
@@ -52,6 +53,113 @@ exports.importCatalogProductFromSku = onRequest(
     }
   },
 );
+
+// Public, read-only stock lookup for the storefront. Returns ONLY available
+// units per SKU (never costs or margins — inventory_items also holds avgCostCop
+// and totalValueCop, which must never reach the browser).
+//
+// Source of truth is Firestore `inventory_items`, which the dashboard updates
+// live (the ML_SALE channel deducts MercadoLibre sales as they happen). The
+// Neon mirror of this data is NOT used: it stopped syncing on 2026-06-23 and
+// overstates stock by ~80%.
+const STOCK_CACHE_TTL_MS = 60000;
+const STOCK_MAX_SKUS = 300;
+const INVENTORY_COLLECTION = "inventory_items";
+let stockSnapshot = null; // { map: Map(lowercased sku -> units), expires }
+
+exports.getCatalogStock = onRequest(
+  {
+    region: "us-central1",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+  },
+  async (req, res) => {
+    setCors(req, res);
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (!["GET", "POST"].includes(req.method)) {
+      sendError(res, httpError(405, "method-not-allowed"));
+      return;
+    }
+
+    try {
+      const skus = requestSkuList(req);
+      if (!skus.length) throw httpError(400, "missing-skus");
+      const stock = await getStockForSkus(skus);
+      res.status(200).json({ stock });
+    } catch (err) {
+      sendError(res, err);
+    }
+  },
+);
+
+function requestSkuList(req) {
+  let raw;
+  if (req.method === "GET") {
+    raw = req.query.skus ?? req.query.sku;
+  } else {
+    raw = req.body?.skus ?? req.body?.sku;
+  }
+  const list = Array.isArray(raw) ? raw : String(raw || "").split(",");
+  const seen = new Set();
+  const out = [];
+  for (const item of list) {
+    const sku = cleanText(item);
+    if (!sku) continue;
+    const key = sku.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(sku);
+    if (out.length >= STOCK_MAX_SKUS) break;
+  }
+  return out;
+}
+
+async function getStockForSkus(skus) {
+  const map = await loadStockSnapshot();
+  const result = {};
+  skus.forEach((sku) => {
+    const key = sku.toLowerCase();
+    // A SKU with no inventory record stays ABSENT from the response so the
+    // storefront treats it as "unknown" (no badge, no blocking) rather than
+    // wrongly marking it sold out.
+    if (map.has(key)) result[sku] = map.get(key);
+  });
+  return result;
+}
+
+// One cached snapshot of the whole collection (~580 docs): it is small, it lets
+// us match SKUs case-insensitively (the catalog and inventory disagree on case
+// for some SKUs), and it keeps Firestore reads flat regardless of traffic.
+async function loadStockSnapshot() {
+  const now = Date.now();
+  if (stockSnapshot && stockSnapshot.expires > now) return stockSnapshot.map;
+
+  const snap = await admin.firestore().collection(INVENTORY_COLLECTION).get();
+  const map = new Map();
+  snap.docs.forEach((doc) => {
+    const data = doc.data() || {};
+    const key = cleanText(data.sku || doc.id).toLowerCase();
+    if (key) map.set(key, availableUnits(data));
+  });
+
+  stockSnapshot = { map, expires: now + STOCK_CACHE_TTL_MS };
+  return map;
+}
+
+// Units that can actually be sold. Excludes inbound* (goods in transit) by
+// design, and floors negative drift (the dashboard flags those with
+// negativeStockFlag) at 0 so it reads as "sold out" instead of a negative.
+function availableUnits(data) {
+  const n = (v) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const units =
+    n(data.onHandLocalQty) + n(data.onHandFullQty) + n(data.onHandMarketQty) -
+    n(data.reservedQty) - n(data.defectiveQty);
+  return Math.max(0, Math.floor(units));
+}
 
 exports.generateCatalogProductDraft = onRequest(
   {
@@ -112,6 +220,221 @@ exports.upsertCatalogClientUser = onRequest(
     }
   },
 );
+
+/* ============================================================================
+ * ESPEJO DE INVENTARIO: Firestore -> Neon
+ * ============================================================================
+ * El mirror del dashboard (`neonMirrorSync`, otro proyecto) replica pedidos y
+ * lineas correctamente, pero su rama de inventario quedo rota el 2026-06-23:
+ * reporta `inventoryItemsMirrored: N` y no escribe ninguna fila, y
+ * `inventoryMovementsMirrored` es 0 siempre. Esto mantiene al dia
+ * `InventoryItem` / `InventoryMovement` mientras eso se arregla en su repo.
+ *
+ * OJO (probable causa del bug ajeno): en Firestore `updatedAt` y `createdAt`
+ * de estas colecciones son STRINGS ISO-8601, no Timestamps. Un filtro contra
+ * `Timestamp.fromDate(...)` nunca coincide bien, porque Firestore ordena por
+ * tipo antes que por valor. Aqui se comparan como strings, que para ISO en UTC
+ * ordenan igual que cronologicamente.
+ *
+ * Es idempotente (upsert por id), asi que puede convivir con el mirror ajeno
+ * si algun dia lo reparan: ambos escribirian lo mismo desde la misma fuente.
+ */
+const INV_ITEMS_COLLECTION = "inventory_items";
+const INV_MOVEMENTS_COLLECTION = "inventory_movements";
+// Se reprocesa una ventana previa al watermark por si dos escrituras comparten
+// timestamp. Como el upsert es idempotente, repetir es inofensivo.
+const MIRROR_OVERLAP_MS = 5 * 60 * 1000;
+const MIRROR_CHUNK = 100;
+
+exports.mirrorInventoryToNeon = onSchedule(
+  {
+    schedule: "every 5 minutes",
+    region: "us-central1",
+    timeoutSeconds: 540,
+    memory: "512MiB",
+    secrets: [neonDatabaseUrl],
+  },
+  async () => {
+    const r = await runInventoryMirror();
+    console.log(
+      `mirrorInventoryToNeon: items=${r.itemsMirrored} movements=${r.movementsMirrored}` +
+      ` (items desde ${r.itemsSince || "inicio"}, mov desde ${r.movementsSince || "inicio"})`,
+    );
+  },
+);
+
+// Disparo manual / backfill. Admin-only a proposito.
+//   GET /mirrorInventoryToNeonRun?full=1   -> reprocesa todo
+exports.mirrorInventoryToNeonRun = onRequest(
+  {
+    region: "us-central1",
+    timeoutSeconds: 540,
+    memory: "512MiB",
+    secrets: [neonDatabaseUrl],
+  },
+  async (req, res) => {
+    setCors(req, res);
+    if (req.method === "OPTIONS") { res.status(204).send(""); return; }
+    try {
+      await requireAdmin(req);
+      const full = req.query.full === "1" || req.body?.full === true;
+      const r = await runInventoryMirror({ full });
+      res.status(200).json({ ok: true, ...r });
+    } catch (err) {
+      sendError(res, err);
+    }
+  },
+);
+
+async function runInventoryMirror({ full = false } = {}) {
+  const db = admin.firestore();
+  const items = await mirrorInventoryItems(db, full);
+  const movements = await mirrorInventoryMovements(db, full);
+  return {
+    itemsMirrored: items.count,
+    itemsSince: items.since,
+    movementsMirrored: movements.count,
+    movementsSince: movements.since,
+    at: new Date().toISOString(),
+  };
+}
+
+// Watermark leido de Neon: sin estado propio que se pueda desincronizar, y la
+// primera corrida arrastra sola todo el atraso acumulado.
+async function neonWatermark(table, column) {
+  const sql = `select max("${column}") as m from public."${table}"`;
+  const { rows } = await getPool().query(sql);
+  const max = rows[0]?.m;
+  if (!max) return null;
+  return new Date(new Date(max).getTime() - MIRROR_OVERLAP_MS).toISOString();
+}
+
+async function mirrorInventoryItems(db, full) {
+  const since = full ? null : await neonWatermark("InventoryItem", "updatedAt");
+  let query = db.collection(INV_ITEMS_COLLECTION);
+  // Comparacion como STRING: asi estan guardados los ISO en Firestore.
+  if (since) query = query.where("updatedAt", ">", since);
+  const snap = await query.get();
+  if (snap.empty) return { count: 0, since };
+
+  const rows = snap.docs.map((doc) => {
+    const x = doc.data() || {};
+    return [
+      doc.id,                                   // id (PK)
+      cleanText(x.sku || doc.id),               // sku      NOT NULL
+      cleanText(x.name) || cleanText(x.sku) || doc.id, // name NOT NULL
+      x.imageUrl ?? null,
+      num(x.onHandLocalQty),                    // NOT NULL
+      num(x.onHandFullQty),                     // NOT NULL
+      num(x.onHandMarketQty),
+      num(x.inboundLocalQty),
+      num(x.inboundFullQty),
+      num(x.defectiveQty),
+      num(x.reservedQty),
+      num(x.returnPendingQty),
+      num(x.avgCostCop),                        // NOT NULL
+      num(x.totalValueCop),                     // NOT NULL
+      toDate(x.updatedAt) || new Date(),        // NOT NULL
+      x.missingCostFlag === true,
+      x.negativeStockFlag === true,
+      x.missingCategoryFlag === true,
+      doc.id,                                   // firestoreDocId
+    ];
+  });
+
+  // Solo se tocan las columnas que Firestore realmente provee: las demas
+  // (category, master*, lead/safety overrides, flags...) se dejan intactas
+  // para no pisarlas con null.
+  const cols = [
+    "id", "sku", "name", "imageUrl",
+    "onHandLocalQty", "onHandFullQty", "onHandMarketQty",
+    "inboundLocalQty", "inboundFullQty",
+    "defectiveQty", "reservedQty", "returnPendingQty",
+    "avgCostCop", "totalValueCop", "updatedAt",
+    "missingCostFlag", "negativeStockFlag", "missingCategoryFlag",
+    "firestoreDocId",
+  ];
+  const updates = cols.filter((c) => c !== "id").map((c) => `"${c}" = excluded."${c}"`).join(", ");
+  await upsertChunks("InventoryItem", cols, rows, `on conflict (id) do update set ${updates}`);
+  return { count: rows.length, since };
+}
+
+async function mirrorInventoryMovements(db, full) {
+  const since = full ? null : await neonWatermark("InventoryMovement", "createdAt");
+  let query = db.collection(INV_MOVEMENTS_COLLECTION);
+  if (since) query = query.where("createdAt", ">", since);
+  const snap = await query.get();
+  if (snap.empty) return { count: 0, since };
+
+  const rows = snap.docs.map((doc) => {
+    const x = doc.data() || {};
+    return [
+      doc.id,                                    // id (PK)
+      cleanText(x.type) || "ADJUST",             // NOT NULL
+      cleanText(x.sku),                          // NOT NULL
+      num(x.qty),                                // NOT NULL
+      cleanText(x.sourceType) || "UNKNOWN",      // NOT NULL
+      x.sourceId ?? null,
+      x.reference ?? null,
+      x.channel ?? null,
+      x.location ?? null,
+      x.fromLocation ?? null,
+      x.toLocation ?? null,
+      x.documentRef ?? null,
+      x.reasonCode ?? null,
+      x.customerName ?? null,
+      x.unitCostCop == null ? null : num(x.unitCostCop),
+      x.totalCostCop == null ? null : num(x.totalCostCop),
+      toDate(x.createdAt) || new Date(),         // NOT NULL
+      // Firestore no guarda effectiveAt; la fecha real del movimiento es
+      // occurredAt cuando existe.
+      toDate(x.occurredAt) || toDate(x.createdAt),
+      x.metadata == null ? null : JSON.stringify(x.metadata),
+      doc.id,                                    // firestoreDocId
+    ];
+  });
+
+  const cols = [
+    "id", "type", "sku", "qty", "sourceType", "sourceId", "reference", "channel",
+    "location", "fromLocation", "toLocation", "documentRef", "reasonCode", "customerName",
+    "unitCostCop", "totalCostCop", "createdAt", "effectiveAt", "metadata", "firestoreDocId",
+  ];
+  // Libro inmutable: si la fila ya existe, no hay nada que actualizar.
+  await upsertChunks("InventoryMovement", cols, rows, "on conflict (id) do nothing");
+  return { count: rows.length, since };
+}
+
+// Inserta en lotes con VALUES multi-fila (un round trip por lote).
+async function upsertChunks(table, cols, rows, conflictClause) {
+  const colList = cols.map((c) => `"${c}"`).join(", ");
+  for (let i = 0; i < rows.length; i += MIRROR_CHUNK) {
+    const chunk = rows.slice(i, i + MIRROR_CHUNK);
+    const values = [];
+    const params = [];
+    chunk.forEach((row, r) => {
+      const base = r * cols.length;
+      values.push(`(${cols.map((_, c) => `$${base + c + 1}`).join(", ")})`);
+      params.push(...row);
+    });
+    const sql =
+      `insert into public."${table}" (${colList}) values ${values.join(", ")} ${conflictClause}`;
+    await getPool().query(sql, params);
+  }
+}
+
+function num(value) {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// Firestore guarda estos campos como string ISO, pero se aceptan Timestamps
+// por si alguna escritura futura cambia de tipo.
+function toDate(value) {
+  if (value == null) return null;
+  if (typeof value?.toDate === "function") return value.toDate();
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 function setCors(req, res) {
   const origin = req.get("origin");

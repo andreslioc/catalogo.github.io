@@ -74,6 +74,112 @@ from normalized;
 
 Campos reconocidos por alias: `sku`, `nombre`, `marca`, `categoria`, `presentacion`, `descripcion`, `imagen`, `beneficios`, `ingredientes`, `dosis`, `modoUso`, `advertencias`, `costoLlegada`, `precioBase`, `margenSugeridoPct`, `imagenesCatalogo`, `escalasUnidades`.
 
+## Disponibilidad de inventario (stock en vivo)
+
+El catálogo consulta las unidades disponibles para no vender lo que ya se vendió
+por MercadoLibre. El flujo es:
+
+1. `app.js` llama a la Firebase Function pública `getCatalogStock` con el lote
+   de SKUs visibles (POST `{ skus: [...] }`).
+2. La Function lee **Firestore `inventory_items`** y devuelve **solo** las
+   unidades por SKU (`{ stock: { "SalCar-301": 25, ... } }`).
+3. El frontend muestra badges ("Disponibles", "Últimas N", "Agotado"), topa la
+   cantidad al stock, bloquea agregar productos agotados y marca en la
+   cotización las líneas que exceden lo disponible.
+4. Al abrir un producto se re-consulta su SKU para refrescar el número.
+5. El panel de admin muestra un badge de disponibilidad por producto
+   ("Disp: N", "Últimas N", "Agotado") usando el mismo endpoint.
+
+### Fuente del dato: Firestore, NO Neon
+
+`inventory_items` es el maestro de inventario vivo: el dashboard lo actualiza en
+tiempo real y su canal `ML_SALE` descuenta cada venta de MercadoLibre al
+momento.
+
+> **No usar Neon para stock.** Neon tiene un espejo de estas tablas
+> (`InventoryItem`, `ProductCost`, `ProductCostLayer`), pero **dejó de
+> sincronizarse el 2026-06-23** y sobreestima el stock ~80 %. Además
+> `ProductCost` / `ProductCostLayer` **no son inventario**: son capas de
+> *costeo* (COGS) y su `availableQty` dejó de consumirse al migrar a promedio
+> ponderado. Neon sigue siendo válido solo para importar productos.
+
+### Fórmula de disponibilidad
+
+```txt
+disponible = onHandLocalQty + onHandFullQty + onHandMarketQty
+           − reservedQty − defectiveQty
+```
+
+- **Excluye** `inboundLocalQty` / `inboundFullQty`: mercancía **en tránsito**,
+  que no está disponible para vender.
+- **Pisa en 0** los negativos. Hay ~21 SKUs con deriva de inventario real
+  (marcados por el dashboard con `negativeStockFlag`); se muestran "Agotado".
+- Cuidado: `onHandQty` **no** es un total — es un alias de `onHandLocalQty`.
+  Usarlo dejaría fuera lo que está en FULL.
+- Un SKU sin registro en `inventory_items` se **omite** de la respuesta, y el
+  frontend lo trata como *desconocido* (sin badge, sin bloquear la venta), no
+  como agotado.
+
+La Function cachea un snapshot de la colección ~60 s. Eso mantiene las lecturas
+de Firestore planas ante ráfagas de visitantes y permite resolver los SKUs sin
+distinguir mayúsculas (catálogo e inventario difieren en el caso de algún SKU,
+p. ej. `Salpip-412` vs `SalPip-412`).
+
+Los costos (`avgCostCop`, `totalValueCop`) viven en esa misma colección, por eso
+el catálogo **no** la lee directo: la Function actúa de filtro y solo expone
+unidades.
+
+Desplegar la función:
+
+```powershell
+firebase deploy --only functions:getCatalogStock
+```
+
+Si Firebase entrega una URL distinta a la configurada, actualiza
+`CATALOG_STOCK_ENDPOINT` en `firebase-config.js`.
+
+## Espejo de inventario Firestore → Neon
+
+El catálogo NO necesita esto (lee Firestore directo). Existe porque el mirror
+del dashboard (`neonMirrorSync`, en el repo Dashboard) tiene rota su rama de
+inventario desde el 2026-06-23: reporta `inventoryItemsMirrored: N` pero no
+escribe ninguna fila, y `inventoryMovementsMirrored` es `0` siempre. Mientras
+eso se arregla allá, estas functions mantienen Neon al día:
+
+- `mirrorInventoryToNeon` — programada cada 5 min.
+- `mirrorInventoryToNeonRun` — disparo manual, **admin-only**
+  (`?full=1` reprocesa todo).
+
+```powershell
+firebase deploy --only functions:mirrorInventoryToNeon,functions:mirrorInventoryToNeonRun
+```
+
+### Detalle que importa
+
+> **`updatedAt` y `createdAt` de `inventory_items` / `inventory_movements` son
+> STRINGS ISO-8601, no `Timestamp` de Firestore** (verificado: 580/580 y
+> 15.036/15.036). Un filtro contra `Timestamp.fromDate(...)` no coincide bien,
+> porque Firestore ordena por tipo antes que por valor. Aquí se comparan como
+> strings, que para ISO en UTC ordenan igual que cronológicamente. Es la causa
+> más probable del bug del mirror del dashboard.
+
+Otras decisiones:
+
+- **Watermark leído de Neon** (`max(updatedAt)` / `max(createdAt)`), sin estado
+  propio que se desincronice: la primera corrida arrastra sola todo el atraso.
+  Se reprocesa una ventana de 5 min previa por si hay timestamps empatados.
+- **Idempotente**: `InventoryItem` va por `on conflict (id) do update`;
+  `InventoryMovement` por `on conflict (id) do nothing` (libro inmutable). Puede
+  convivir con el mirror del dashboard si algún día lo reparan.
+- **Solo se escriben las columnas que Firestore provee.** Las demás (`category`,
+  `master*`, overrides de lead/safety, `flags`) se dejan intactas para no
+  pisarlas con `null`.
+- `effectiveAt` no existe en Firestore; se deriva de `occurredAt` y, si falta,
+  de `createdAt`.
+
+Cuando el mirror del dashboard quede arreglado, **retirar estas dos functions**
+para no tener dos sistemas replicando lo mismo.
+
 ## Configurar Firebase Functions
 
 Instalar dependencias:
