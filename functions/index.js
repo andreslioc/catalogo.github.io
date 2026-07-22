@@ -68,6 +68,7 @@ exports.importCatalogProductFromSku = onRequest(
 // ajustes) y la copia de Firestore `inventory_items` quedó congelada — solo le
 // llegan descuentos de ventas ML, nunca las recepciones, así que subestima el
 // stock (los ejemplos reportados marcaban 0 con 8-23 unidades reales).
+// El "disponible" suma bodega local + bodega market (ver loadStockSnapshot).
 const STOCK_CACHE_TTL_MS = 60000;
 const STOCK_MAX_SKUS = 300;
 let stockSnapshot = null; // { map: Map(lowercased sku -> units), expires }
@@ -141,19 +142,21 @@ async function getStockForSkus(skus) {
 // matchear SKUs sin distinguir mayúsculas (catálogo e inventario difieren en
 // algunos) y mantiene plano el número de queries a Neon sin importar tráfico.
 //
-// Disponible = onHandLocalQty − reservedQty − defectiveQty. NO suma:
+// Disponible = onHandLocalQty + onHandMarketQty (suma pura; decisión de negocio
+// 2026-07-22). local = bodega Colombia; market = todo lo vendible fuera de ML
+// MÁS lo bloqueado en ML. NO suma:
 //  - inbound*: mercancía en tránsito, aún no vendible.
 //  - onHandFullQty: bodega de Mercado Envíos Full, comprometida con ML.
-//  - onHandMarketQty: bodega en USA, no vendible localmente.
-// Es el mismo número que muestran Nexus y Upseller. El piso en 0 hace que la
-// deriva negativa (negativeStockFlag en el dashboard) se lea como "agotado".
+// NO resta reservedQty ni defectiveQty (por pedido explícito): la suma es pura,
+// así que puede exponer como disponible alguna unidad reservada o defectuosa. El
+// piso en 0 hace que la deriva negativa (negativeStockFlag) se lea como "agotado".
 async function loadStockSnapshot() {
   const now = Date.now();
   if (stockSnapshot && stockSnapshot.expires > now) return stockSnapshot.map;
 
   const { rows } = await getInventoryPool().query(`
     select sku,
-      greatest(0, floor("onHandLocalQty" - "reservedQty" - "defectiveQty"))::int as units
+      greatest(0, floor("onHandLocalQty" + "onHandMarketQty"))::int as units
     from public."InventoryItem"
   `);
   const map = new Map();
