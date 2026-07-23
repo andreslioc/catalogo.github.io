@@ -764,6 +764,24 @@ function quoteIdentifier(part) {
   return `"${part.replace(/"/g, "\"\"")}"`;
 }
 
+// La app vieja de Nexus (product-master--nexus.replit.app) desaparecio al
+// migrar a Vercel; sus /objects/... devuelven 404. Las mismas imagenes viven
+// ahora en el bucket R2 publico. Firestore ya se corrigio una vez con
+// fix_image_urls.cjs, pero Neon (fuente de los SKUs que aun no se han
+// importado) sigue con las URLs muertas, asi que hay que reescribirlas aqui
+// tambien para que un SKU importado por primera vez no traiga la foto rota.
+const OLD_REPLIT_UPLOADS = /^https:\/\/product-master--nexus\.replit\.app\/objects\/uploads\//;
+const OLD_REPLIT_PRIVATE = /^https:\/\/product-master--nexus\.replit\.app\/objects\/\.private\//;
+const R2_PUBLIC_BASE = "https://pub-74be3f08e8ab44c490fe4d652d79a419.r2.dev/";
+
+function rewriteImageUrl(url) {
+  const s = String(url || "").trim();
+  if (!s) return s;
+  if (OLD_REPLIT_UPLOADS.test(s)) return s.replace(OLD_REPLIT_UPLOADS, `${R2_PUBLIC_BASE}uploads/`);
+  if (OLD_REPLIT_PRIVATE.test(s)) return s.replace(OLD_REPLIT_PRIVATE, R2_PUBLIC_BASE);
+  return s;
+}
+
 function mapNeonRowToCatalogProduct(row, fallbackSku) {
   const get = valueGetter(row);
   const product = {
@@ -778,7 +796,7 @@ function mapNeonRowToCatalogProduct(row, fallbackSku) {
     advertencias: cleanText(get(["advertencias", "warnings", "precauciones"])),
     beneficios: parseList(get(["beneficios", "benefits"])),
     ingredientes: parseList(get(["ingredientes", "ingredients"])),
-    imagen: cleanText(get(["imagen", "image", "image_url", "imagen_url", "foto", "photo_url", "main_image_url"])),
+    imagen: rewriteImageUrl(cleanText(get(["imagen", "image", "image_url", "imagen_url", "foto", "photo_url", "main_image_url"]))),
     costoLlegada: parseCurrency(get([
       "costoLlegada",
       "costo_llegada",
@@ -798,7 +816,7 @@ function mapNeonRowToCatalogProduct(row, fallbackSku) {
 
   product.imagenesCatalogo = parseList(
     get(["imagenesCatalogo", "imagenes_catalogo", "images", "image_urls", "gallery"]),
-  );
+  ).map(rewriteImageUrl);
   if (product.imagen && !product.imagenesCatalogo.includes(product.imagen)) {
     product.imagenesCatalogo.unshift(product.imagen);
   }
