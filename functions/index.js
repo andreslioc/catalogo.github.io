@@ -103,7 +103,7 @@ exports.getCatalogStock = onRequest(
   },
 );
 
-function requestSkuList(req) {
+function requestSkuList(req, limit = STOCK_MAX_SKUS) {
   let raw;
   if (req.method === "GET") {
     raw = req.query.skus ?? req.query.sku;
@@ -120,7 +120,7 @@ function requestSkuList(req) {
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(sku);
-    if (out.length >= STOCK_MAX_SKUS) break;
+    if (out.length >= limit) break;
   }
   return out;
 }
@@ -167,6 +167,81 @@ async function loadStockSnapshot() {
 
   stockSnapshot = { map, expires: now + STOCK_CACHE_TTL_MS };
   return map;
+}
+
+// Costo de llegada por SKU desde Neon `InventoryItem`."avgCostCop" (el costo
+// promedio ponderado que el dashboard de Nexus recalcula en cada recepcion de
+// lote).
+//
+// SOLO ADMIN, a diferencia de getCatalogStock: avgCostCop es informacion de
+// costos y no puede llegar al navegador de un cliente.
+//
+// Sin cache: el sentido del boton "Recalcular costos" en el admin es leer el
+// costo recien commiteado por Nexus, asi que una copia de hace 60 s seria
+// justamente el dato equivocado.
+//
+// Un SKU con costo <= 0 (o ausente en InventoryItem) queda FUERA de la
+// respuesta. Asi el admin lo trata como "sin costo en Neon" y nunca sobrescribe
+// un costo bueno con un cero.
+const COST_MAX_SKUS = 1000;
+
+exports.getCatalogLandedCost = onRequest(
+  {
+    region: "us-central1",
+    timeoutSeconds: 30,
+    memory: "256MiB",
+    secrets: [neonInventoryDatabaseUrl],
+  },
+  async (req, res) => {
+    setCors(req, res);
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (!["GET", "POST"].includes(req.method)) {
+      sendError(res, httpError(405, "method-not-allowed"));
+      return;
+    }
+
+    try {
+      await requireAdmin(req);
+      const skus = requestSkuList(req, COST_MAX_SKUS);
+      if (!skus.length) throw httpError(400, "missing-skus");
+      const costs = await getLandedCostForSkus(skus);
+      res.status(200).json({ costs });
+    } catch (err) {
+      sendError(res, err);
+    }
+  },
+);
+
+async function getLandedCostForSkus(skus) {
+  const lowered = skus.map((sku) => sku.toLowerCase());
+  const { rows } = await getInventoryPool().query(
+    `select sku, round("avgCostCop"::numeric)::bigint as cost
+       from public."InventoryItem"
+      where lower(sku::text) = any($1::text[])`,
+    [lowered],
+  );
+
+  // El match es case-insensitive porque catalogo e inventario difieren en
+  // mayusculas para algunos SKUs (mismo motivo que loadStockSnapshot).
+  const byKey = new Map();
+  rows.forEach((row) => {
+    const key = cleanText(row.sku).toLowerCase();
+    const cost = Number(row.cost);
+    if (key && Number.isFinite(cost) && cost > 0) byKey.set(key, cost);
+  });
+
+  // Se devuelve con la grafia del SKU que pidio el cliente, para que pueda
+  // indexar la respuesta con su propia clave.
+  const result = {};
+  skus.forEach((sku) => {
+    const cost = byKey.get(sku.toLowerCase());
+    if (cost != null) result[sku] = cost;
+  });
+  return result;
 }
 
 exports.generateCatalogProductDraft = onRequest(
