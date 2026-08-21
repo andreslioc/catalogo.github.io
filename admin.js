@@ -1,9 +1,9 @@
 import {
-  db, auth, storage, COLLECTION, CLIENTS_COLLECTION, NEON_IMPORT_ENDPOINT, CLIENT_USER_ENDPOINT, AI_DRAFT_ENDPOINT, CATALOG_STOCK_ENDPOINT,
+  db, auth, storage, COLLECTION, CLIENTS_COLLECTION, NEON_IMPORT_ENDPOINT, CLIENT_USER_ENDPOINT, AI_DRAFT_ENDPOINT, CATALOG_STOCK_ENDPOINT, CATALOG_COST_ENDPOINT,
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
   signOut, onAuthStateChanged, getIdTokenResult,
   storageRef, uploadBytesResumable, getDownloadURL,
-} from "./firebase-config.js?v=20260703-2";
+} from "./firebase-config.js?v=20260821-3";
 import {
   DEFAULT_MARGIN_PCT,
   DEFAULT_WHOLESALE_RULES,
@@ -183,6 +183,154 @@ function applyStockBadge(el, units) {
 }
 
 // Recorre las filas ya renderizadas y refresca su badge según el SKU actual.
+/* ---------------- COSTO DE LLEGADA (Neon) ---------------- */
+
+// Pone el candado en todos los productos de una sola pasada.
+//
+// Hace falta porque el default "bloqueado" de normalizeProduct solo aplica
+// cuando el documento NO trae el campo: si alguna vez se guardo un
+// costoBloqueado: false explicito, ese false gana sobre el default y hay que
+// sobrescribirlo. Este boton funciona en los dos casos.
+function lockAllCosts() {
+  const abiertos = state.products.filter((p) => !p.costoBloqueado);
+  if (!abiertos.length) {
+    toast(`Ya estan los ${state.products.length} bloqueados.`);
+    return;
+  }
+  abiertos.forEach((p) => { p.costoBloqueado = true; });
+  markDirty();
+  updatePriceInputs();
+  setStatus(`${abiertos.length} productos bloqueados. <b>Aun no se guardan.</b>`);
+  toast(`${abiertos.length} bloqueados. Dale "Guardar cambios" para dejarlo en firme.`);
+}
+
+// Trae el costo promedio ponderado ("avgCostCop") desde el inventario de Nexus
+// y recalcula el precio sugerido igual que el boton "Calcular costo + margen"
+// de cada fila: precioBase = costo x (1 + margen/100).
+//
+// Salta los productos con el candado puesto (costoBloqueado) y los que no
+// tienen costo en Neon: a esos no les toca nada.
+//
+// No escribe en Firestore. Solo cambia el estado en memoria y marca el editor
+// como sucio; los cambios se publican cuando le das "Guardar cambios". Si algo
+// sale mal, recargar la pagina sin guardar lo deja todo como estaba.
+async function recalcLandedCosts() {
+  if (!CATALOG_COST_ENDPOINT) {
+    toast("Configura CATALOG_COST_ENDPOINT en firebase-config.js.", true);
+    return;
+  }
+
+  const conSku = state.products.filter((p) => String(p.sku || "").trim());
+  const bloqueados = conSku.filter((p) => p.costoBloqueado);
+  const objetivo = conSku.filter((p) => !p.costoBloqueado);
+  const sinSku = state.products.length - conSku.length;
+
+  if (!objetivo.length) {
+    toast(
+      bloqueados.length
+        ? `Nada por recalcular: los ${bloqueados.length} productos con SKU estan bloqueados.`
+        : "Nada por recalcular: ningun producto tiene SKU.",
+      true,
+    );
+    return;
+  }
+
+  const btn = els.recalcCosts;
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Consultando Neon...";
+  setStatus("Consultando costos de llegada en el inventario de Nexus...");
+
+  try {
+    const skus = [...new Set(objetivo.map((p) => String(p.sku).trim()))];
+    const costs = await fetchLandedCosts(skus);
+
+    let actualizados = 0;
+    let iguales = 0;
+    const sinCosto = [];
+
+    objetivo.forEach((p) => {
+      const cost = Number(costs[String(p.sku).trim()]);
+      if (!Number.isFinite(cost) || cost <= 0) { sinCosto.push(p.sku); return; }
+      if (cost === Number(p.costoLlegada)) { iguales++; return; }
+      p.costoLlegada = cost;
+      p.precioBase = precioSugeridoDesdeCosto(cost, p.margenSugeridoPct);
+      actualizados++;
+    });
+
+    if (actualizados) {
+      markDirty();
+      updatePriceInputs();
+    }
+
+    const partes = [`${actualizados} actualizados`];
+    if (iguales) partes.push(`${iguales} sin cambio`);
+    if (bloqueados.length) partes.push(`${bloqueados.length} bloqueados`);
+    if (sinCosto.length) partes.push(`${sinCosto.length} sin costo en Neon`);
+    if (sinSku) partes.push(`${sinSku} sin SKU`);
+    const resumen = partes.join(" · ");
+
+    setStatus(
+      actualizados
+        ? `Costos recalculados: ${resumen}. <b>Aun no se guardan.</b>`
+        : `Costos recalculados: ${resumen}.`,
+    );
+    toast(
+      actualizados
+        ? `${resumen}. Revisa y dale "Guardar cambios" para publicar.`
+        : `Sin cambios. ${resumen}.`,
+    );
+    if (sinCosto.length) console.warn("[costos] sin costo en Neon:", sinCosto.join(", "));
+  } catch (err) {
+    console.warn("[costos]", err);
+    toast("No se pudo recalcular: " + (err?.message || err), true);
+    setStatus("Error al consultar costos. Nada cambio.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+
+async function fetchLandedCosts(skus) {
+  const token = await currentAdminToken();
+  const res = await fetch(new URL(CATALOG_COST_ENDPOINT, window.location.href).toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ skus }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || data?.message || `HTTP ${res.status}`);
+  return data?.costs && typeof data.costs === "object" ? data.costs : {};
+}
+
+// Repinta solo los tres inputs de precio de cada fila visible, sin reconstruir
+// el editor (mismo motivo que updateStockBadges: un render() completo perderia
+// el foco y el scroll en medio de una edicion).
+function updatePriceInputs() {
+  const bySku = new Map(state.products.map((p) => [String(p.sku || "").trim(), p]));
+  els.editor.querySelectorAll(".edit-card").forEach((card) => {
+    const p = bySku.get(card.querySelector(".f-sku")?.value?.trim());
+    if (!p) return;
+    const costInput = card.querySelector(".f-costoLlegada");
+    const baseInput = card.querySelector(".f-precioBase");
+    const lockInput = card.querySelector(".f-costoBloqueado");
+    if (costInput) costInput.value = p.costoLlegada || "";
+    if (baseInput) baseInput.value = p.precioBase || "";
+    if (lockInput) {
+      lockInput.checked = p.costoBloqueado;
+      if (costInput) {
+        costInput.readOnly = p.costoBloqueado;
+        costInput.classList.toggle("is-locked", p.costoBloqueado);
+      }
+      card.querySelector(".price-base")?.classList.toggle("cost-locked", p.costoBloqueado);
+    }
+  });
+}
+
 function updateStockBadges() {
   els.editor.querySelectorAll(".edit-card").forEach((card) => {
     const sku = card.querySelector(".f-sku")?.value?.trim();
@@ -201,6 +349,8 @@ function cacheEls() {
   els.search = document.getElementById("admin-search");
   els.toast = document.getElementById("toast");
   els.catList = document.getElementById("cat-list");
+  els.lockAll = document.getElementById("btn-lock-all");
+  els.recalcCosts = document.getElementById("btn-recalc-costs");
   els.skuImportForm = document.getElementById("sku-import-form");
   els.skuImportInput = document.getElementById("sku-import-input");
   els.skuImportButton = document.getElementById("btn-import-sku");
@@ -219,6 +369,8 @@ function cacheEls() {
 function bindToolbar() {
   document.getElementById("btn-add").addEventListener("click", addProduct);
   document.getElementById("btn-save").addEventListener("click", save);
+  els.lockAll.addEventListener("click", lockAllCosts);
+  els.recalcCosts.addEventListener("click", recalcLandedCosts);
   document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
   els.skuImportForm.addEventListener("submit", importProductBySku);
   els.clientForm.addEventListener("submit", saveClient);
@@ -445,6 +597,12 @@ function normalizeProduct(p) {
   p.imagenesCatalogo = gallery;
   p.imagen = gallery[0] || "";
   p.costoLlegada = Number(p.costoLlegada) || 0;
+  // Bloqueado por defecto: solo un false explicito lo desbloquea. Los productos
+  // que ya estaban en Firestore no traen el campo, asi que entran bloqueados sin
+  // necesidad de migrarlos, y los nuevos (o los importados de Neon) tambien. El
+  // boton "Recalcular costos" queda entonces opt-in: destildas el candado de los
+  // productos que quieres que administre.
+  p.costoBloqueado = p.costoBloqueado !== false;
   p.margenSugeridoPct = Number.isFinite(Number(p.margenSugeridoPct)) ? Number(p.margenSugeridoPct) : DEFAULT_MARGIN_PCT;
   p.precioBase = Number(p.precioBase) || 0;
   p.escalasUnidades = Array.isArray(p.escalasUnidades)
@@ -777,9 +935,29 @@ function bindPriceFields(node, p) {
   const costInput = node.querySelector(".f-costoLlegada");
   const marginInput = node.querySelector(".f-margenSugeridoPct");
   const baseInput = node.querySelector(".f-precioBase");
+  const lockInput = node.querySelector(".f-costoBloqueado");
   costInput.value = p.costoLlegada || "";
   marginInput.value = p.margenSugeridoPct ?? DEFAULT_MARGIN_PCT;
   baseInput.value = p.precioBase || "";
+
+  // Bloqueado = intocable: ni el boton general "Recalcular costos" ni la
+  // edicion a mano pueden cambiar el costo de llegada. Para cambiarlo hay que
+  // destildar el candado primero.
+  if (lockInput) {
+    const applyLock = () => {
+      costInput.readOnly = p.costoBloqueado;
+      costInput.classList.toggle("is-locked", p.costoBloqueado);
+      node.querySelector(".price-base")?.classList.toggle("cost-locked", p.costoBloqueado);
+    };
+    lockInput.checked = p.costoBloqueado;
+    applyLock();
+    lockInput.addEventListener("change", () => {
+      p.costoBloqueado = lockInput.checked;
+      applyLock();
+      markDirty();
+    });
+  }
+
   costInput.addEventListener("input", () => { p.costoLlegada = Number(costInput.value) || 0; markDirty(); });
   marginInput.addEventListener("input", () => { p.margenSugeridoPct = Number(marginInput.value) || DEFAULT_MARGIN_PCT; markDirty(); });
   baseInput.addEventListener("input", () => { p.precioBase = Number(baseInput.value) || 0; markDirty(); });
@@ -1328,6 +1506,7 @@ function toFirestore(p, orden) {
   out.precioBase = Number(p.precioBase) || 0;
   out.precio = out.precioBase > 0 ? money(out.precioBase) : "";
   out.costoLlegada = Number(p.costoLlegada) || 0;
+  out.costoBloqueado = p.costoBloqueado !== false;
   out.margenSugeridoPct = Number(p.margenSugeridoPct) || DEFAULT_MARGIN_PCT;
   const gallery = (p.imagenesCatalogo || [])
     .map((u) => String(u || "").trim())
