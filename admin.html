@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Editar Catálogo · Admin</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="admin.css?v=20260703-2" />
+  <link rel="stylesheet" href="admin.css?v=20260821-3" />
 </head>
 <body class="admin">
   <div id="login" class="login-screen">
@@ -33,6 +33,8 @@
         </div>
         <div class="admin-actions">
           <button id="btn-add" class="btn btn-ghost">+ Agregar producto</button>
+          <button id="btn-lock-all" class="btn btn-ghost" title="Pone el candado en todos los productos. Despues destilda solo los que quieras que administre «Recalcular costos».">Bloquear todos</button>
+          <button id="btn-recalc-costs" class="btn btn-ghost" title="Trae el costo de llegada desde el inventario de Nexus y recalcula el precio sugerido. Salta los productos bloqueados (todos lo estan por defecto: destilda el candado del producto que quieras que administre).">Recalcular costos</button>
           <button id="btn-save" class="btn btn-primary">Guardar cambios</button>
           <a href="index.html" class="btn btn-ghost" target="_blank" rel="noopener">Ver catálogo ↗</a>
         </div>
@@ -118,6 +120,10 @@
           <label class="field">
             <span>Costo llegada COP</span>
             <input class="f-costoLlegada" type="number" min="0" step="any" placeholder="ej. 35000" />
+          </label>
+          <label class="cost-lock" title="Bloqueado: «Recalcular costos» no toca este producto y el costo no se puede editar a mano.">
+            <input class="f-costoBloqueado" type="checkbox" />
+            <span>🔒 Bloqueado</span>
           </label>
           <label class="field">
             <span>Margen %</span>
@@ -208,6 +214,6 @@
 
   <datalist id="cat-list"></datalist>
 
-  <script type="module" src="admin.js?v=20260703-2"></script>
+  <script type="module" src="admin.js?v=20260821-3"></script>
 </body>
 </html>
