@@ -395,6 +395,23 @@
   gap: 9px;
 }
 .price-base .field { gap: 5px; }
+.cost-lock {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  user-select: none;
+}
+.cost-lock input { width: auto; margin: 0; cursor: pointer; }
+.price-base.cost-locked .cost-lock { color: var(--ink); }
+.f-costoLlegada.is-locked {
+  background: #f1f5f9;
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
 .btn-calc-price {
   border: 1px solid var(--accent);
   background: #fff;
