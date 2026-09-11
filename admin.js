@@ -41,12 +41,38 @@ const state = {
 const STOCK_LOW_THRESHOLD = 5;
 const els = {};
 let authResolved = false;
+let hadSession = false;
 const ADMIN_ENTRY_KEY = "catalogAdminEntry";
 const ADMIN_ENTRY_MAX_MS = 10 * 60 * 1000;
 
 function redirectToLogin(reason = "") {
   const suffix = reason ? `&error=${encodeURIComponent(reason)}` : "";
   window.location.replace(`index.html?admin=1${suffix}`);
+}
+
+// Unica salida del panel: borra el sello local, suelta el guardia de cambios
+// sin guardar (la sesion ya no puede escribir) y vuelve al login.
+function leaveAdmin(reason = "") {
+  sessionStorage.removeItem(ADMIN_ENTRY_KEY);
+  state.dirty = false;
+  redirectToLogin(reason);
+}
+
+// Salida voluntaria: la unica que pregunta antes de descartar cambios.
+async function logout() {
+  if (state.dirty && !confirm("Tienes cambios sin guardar. Salir de todos modos?")) return;
+
+  const btn = document.getElementById("btn-logout");
+  btn.disabled = true;
+  try {
+    // signOut primero: si falla, el sello sigue intacto y no quedas a medias.
+    await signOut(auth);
+  } catch (err) {
+    btn.disabled = false;
+    toast("No se pudo cerrar sesion: " + (err?.code || err), true);
+    return;
+  }
+  leaveAdmin();
 }
 
 function withTimeout(promise, ms, message) {
@@ -88,7 +114,9 @@ function initAuth() {
   onAuthStateChanged(auth, async (user) => {
     authResolved = true;
     if (!user) {
-      if (!hasFreshAdminEntry()) redirectToLogin();
+      // hadSession solo es true si esta pestana ya vio un admin valido: un null
+      // posterior es un cierre de sesion (propio o de otra pestana), no el arranque.
+      if (hadSession || !hasFreshAdminEntry()) leaveAdmin();
       return;
     }
 
@@ -100,17 +128,17 @@ function initAuth() {
     try {
       const token = await withTimeout(getIdTokenResult(user, true), 6000, "token-timeout");
       if (token.claims.admin !== true) {
-        sessionStorage.removeItem(ADMIN_ENTRY_KEY);
         await signOut(auth);
-        redirectToLogin("not-admin");
+        leaveAdmin("not-admin");
         return;
       }
       sessionStorage.setItem(ADMIN_ENTRY_KEY, JSON.stringify({ at: Date.now(), email: user.email || "" }));
+      hadSession = true;
       showEditor();
     } catch (err) {
       if (!hasFreshAdminEntry()) {
         await signOut(auth);
-        redirectToLogin("timeout");
+        leaveAdmin("timeout");
       }
     }
   });
@@ -371,7 +399,7 @@ function bindToolbar() {
   document.getElementById("btn-save").addEventListener("click", save);
   els.lockAll.addEventListener("click", lockAllCosts);
   els.recalcCosts.addEventListener("click", recalcLandedCosts);
-  document.getElementById("btn-logout").addEventListener("click", () => signOut(auth));
+  document.getElementById("btn-logout").addEventListener("click", logout);
   els.skuImportForm.addEventListener("submit", importProductBySku);
   els.clientForm.addEventListener("submit", saveClient);
   els.clientClear.addEventListener("click", clearClientForm);

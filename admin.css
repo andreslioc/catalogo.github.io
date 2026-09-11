@@ -123,7 +123,7 @@
 .btn-ghost { background: #f8fafc; }
 .btn-link {
   background: none; border: none; color: var(--accent);
-  cursor: pointer; font-size: 12.5px; text-decoration: underline; padding: 0;
+  cursor: pointer; font-size: 12.5px; text-decoration: underline; padding: 7px 4px;
 }
 
 .admin-subbar {
