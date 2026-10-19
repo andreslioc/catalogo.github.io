@@ -1047,12 +1047,43 @@ function openCart() { els.cart.hidden = false; document.body.style.overflow = "h
 function closeCart() { els.cart.hidden = true; document.body.style.overflow = ""; }
 
 /* ---------------- PDF ---------------- */
-function downloadPDF() {
+// Miniatura JPEG (dataURL) de la portada para incrustar en el PDF, o null si
+// no se pudo leer. Requiere que el host de la imagen envíe CORS (bucket R2).
+// cache:"no-store" evita reutilizar la copia sin CORS que dejó el <img> del catálogo.
+async function pdfThumb(url, px = 120) {
+  if (!url) return null;
+  try {
+    const res = await fetch(url, { mode: "cors", cache: "no-store" });
+    if (!res.ok) return null;
+    const bmp = await createImageBitmap(await res.blob());
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = px;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, px, px);
+    const s = Math.min(px / bmp.width, px / bmp.height);
+    const w = bmp.width * s, h = bmp.height * s;
+    ctx.drawImage(bmp, (px - w) / 2, (px - h) / 2, w, h);
+    return canvas.toDataURL("image/jpeg", 0.8);
+  } catch {
+    return null;
+  }
+}
+
+async function downloadPDF() {
   const lines = cartLines();
   if (!lines.length) { alert("Agrega productos antes de descargar la cotización."); return; }
 
   const { jsPDF } = window.jspdf || {};
   if (!jsPDF) { alert("No se pudo cargar el generador de PDF. Revisa tu conexión."); return; }
+
+  const btn = document.getElementById("cart-pdf");
+  const btnText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Generando…";
+  const thumbs = await Promise.all(lines.map((l) => pdfThumb(productImages(l.p)[0])));
+  btn.disabled = false;
+  btn.textContent = btnText;
 
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
@@ -1088,15 +1119,29 @@ function downloadPDF() {
   // Filas
   doc.setFont("helvetica", "normal").setTextColor(31, 41, 55).setFontSize(10);
   let total = 0;
-  lines.forEach((l) => {
-    if (y > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); y = M; }
-    const name = doc.splitTextToSize(l.p.nombre || l.p.sku, colX.cant - colX.prod - 16);
-    doc.text(name, colX.prod, y);
+  const THUMB = 36;
+  const textX = colX.prod + THUMB + 10;
+  lines.forEach((l, i) => {
+    const name = doc.splitTextToSize(l.p.nombre || l.p.sku, colX.cant - textX - 16);
+    const rowH = Math.max(THUMB, name.length * 12 + 12);
+    if (y + rowH > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); y = M + 10; }
+
+    const top = y - 10;
+    if (thumbs[i]) {
+      doc.addImage(thumbs[i], "JPEG", colX.prod, top, THUMB, THUMB);
+    } else {
+      doc.setDrawColor(229, 231, 235).rect(colX.prod, top, THUMB, THUMB);
+    }
+
+    doc.setFont("helvetica", "normal").setFontSize(10).setTextColor(31, 41, 55);
+    doc.text(name, textX, y);
     doc.text(String(l.qty), colX.cant, y, { align: "right" });
     doc.text(money(l.unit), colX.unit, y, { align: "right" });
     doc.text(money(l.total), colX.tot, y, { align: "right" });
+    doc.setFontSize(8).setTextColor(107, 114, 128);
+    doc.text(`SKU: ${l.p.sku}`, textX, y + name.length * 12);
     total += l.total;
-    y += Math.max(name.length * 12, 14) + 8;
+    y += rowH + 10;
   });
   const totals = quoteTotals(lines, state.wholesaleRules);
 
