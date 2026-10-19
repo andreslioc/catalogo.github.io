@@ -1122,6 +1122,7 @@ async function downloadPDF() {
   const THUMB = 36;
   const textX = colX.prod + THUMB + 10;
   lines.forEach((l, i) => {
+    doc.setFont("helvetica", "normal").setFontSize(10).setTextColor(31, 41, 55);
     const name = doc.splitTextToSize(l.p.nombre || l.p.sku, colX.cant - textX - 16);
     const rowH = Math.max(THUMB, name.length * 12 + 12);
     if (y + rowH > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); y = M + 10; }
@@ -1133,7 +1134,6 @@ async function downloadPDF() {
       doc.setDrawColor(229, 231, 235).rect(colX.prod, top, THUMB, THUMB);
     }
 
-    doc.setFont("helvetica", "normal").setFontSize(10).setTextColor(31, 41, 55);
     doc.text(name, textX, y);
     doc.text(String(l.qty), colX.cant, y, { align: "right" });
     doc.text(money(l.unit), colX.unit, y, { align: "right" });
@@ -1149,7 +1149,7 @@ async function downloadPDF() {
   y += 4;
   doc.setDrawColor(229, 231, 235).line(M, y, W - M, y);
   y += 22;
-  doc.setFont("helvetica", "bold").setFontSize(13);
+  doc.setFont("helvetica", "bold").setFontSize(13).setTextColor(31, 41, 55);
   doc.text("Subtotal", colX.unit, y, { align: "right" });
   doc.text(money(total), colX.tot, y, { align: "right" });
   if (totals.discount > 0) {
