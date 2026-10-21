@@ -6,6 +6,26 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.admin == true;
     }
 
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function shortString(v, max) {
+      return v is string && v.size() <= max;
+    }
+
+    function validBuyer(d) {
+      return d.keys().hasOnly(['nombre', 'tipoDocumento', 'documento', 'telefono', 'email',
+          'proveedor', 'aceptaDatos', 'direcciones', 'direccionPredeterminada', 'creado', 'actualizado'])
+        && shortString(d.nombre, 120)
+        && d.tipoDocumento in ['CC', 'CE', 'NIT', 'PP', 'PPT']
+        && shortString(d.documento, 16)
+        && shortString(d.telefono, 16)
+        && shortString(d.email, 200)
+        && d.direcciones is list && d.direcciones.size() <= 5
+        && shortString(d.direccionPredeterminada, 40);
+    }
+
     function isClient(clientId) {
       return request.auth != null
         && request.auth.token.catalogClient == true
@@ -20,6 +40,20 @@ service cloud.firestore {
     match /catalogo_config/{docId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    // Comprador: solo el dueño lee y escribe su perfil (datos + máx. 5 direcciones).
+    match /compradores/{uid} {
+      allow read: if isAdmin() || isOwner(uid);
+      allow create, update: if isOwner(uid) && validBuyer(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Pedidos: el comprador ve los suyos; solo los escribe la Function
+    // createCatalogOrder (Admin SDK) y Nexus.
+    match /pedidos/{orderId} {
+      allow read: if isAdmin() || (request.auth != null && resource.data.uid == request.auth.uid);
+      allow write: if false;
     }
 
     match /catalogo_clientes/{clientId} {

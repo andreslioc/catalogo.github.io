@@ -2,6 +2,7 @@ const admin = require("firebase-admin");
 const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const { Pool } = require("pg");
+const { precioUnitario, quoteTotals } = require("./pricing");
 
 admin.initializeApp();
 
@@ -12,6 +13,10 @@ const neonDatabaseUrl = defineSecret("NEON_DATABASE_URL");
 // base Neon del dashboard, que es esta.
 const neonInventoryDatabaseUrl = defineSecret("NEON_INVENTORY_DATABASE_URL");
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
+// Token del webhook de borradores de Nexus (tienda Market). Mismo nombre que la
+// variable en Vercel. Local: functions/.secret.local; prod: Secret Manager.
+const marketDraftWebhookToken = defineSecret("MARKET_DRAFT_WEBHOOK_TOKEN");
+const NEXUS_DRAFT_WEBHOOK_URL = "https://nexus-dash-coral.vercel.app/api/webhooks/tienda-market/borradores";
 // Prefer lite first: 3.5 often returns 503 high-demand on free tier.
 const DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite";
 const GEMINI_FALLBACK_MODELS = [
@@ -303,6 +308,275 @@ exports.upsertCatalogClientUser = onRequest(
     }
   },
 );
+
+// Pedido del catálogo (comprador con cuenta). El navegador solo manda SKU +
+// cantidad + id de dirección; aquí se recalcula todo con los datos del servidor
+// (precio maestro o del subcatálogo, escalas, descuento mayorista y stock), se
+// guarda una copia fija del cliente y la dirección en pedidos/{id} y se avisa a
+// Nexus por webhook. Si el webhook no está configurado o falla, el pedido queda
+// guardado igual (estado "pendiente" / "error_envio") para reenviarlo después.
+const ORDER_MAX_LINES = 60;
+const ORDER_MAX_QTY = 9999;
+const ORDER_MIN_INTERVAL_MS = 20000;
+// Bogotá D.C. y Soacha: envío Flex (mismo criterio que "Registrar venta tienda" en Nexus).
+const FLEX_CITY_CODES = new Set(["11001", "25754"]);
+
+exports.createCatalogOrder = onRequest(
+  {
+    region: "us-central1",
+    timeoutSeconds: 30,
+    memory: "256MiB",
+    secrets: [neonInventoryDatabaseUrl, marketDraftWebhookToken],
+  },
+  async (req, res) => {
+    setCors(req, res);
+
+    if (req.method === "OPTIONS") {
+      res.status(204).send("");
+      return;
+    }
+    if (req.method !== "POST") {
+      sendError(res, httpError(405, "method-not-allowed"));
+      return;
+    }
+
+    try {
+      const decoded = await requireUser(req);
+      const pedido = await createCatalogOrder(decoded, req.body || {});
+      res.status(200).json({ pedido });
+    } catch (err) {
+      sendError(res, err);
+    }
+  },
+);
+
+async function createCatalogOrder(decoded, body) {
+  const db = admin.firestore();
+  const uid = decoded.uid;
+  const items = requestOrderItems(body.items);
+  if (!items.length) throw httpError(400, "empty-order");
+
+  const profileSnap = await db.collection("compradores").doc(uid).get();
+  const profile = profileSnap.exists ? profileSnap.data() : null;
+  if (!profile?.nombre || !profile?.documento || !profile?.telefono || profile?.aceptaDatos?.acepta !== true) {
+    throw httpError(400, "profile-incomplete");
+  }
+  const direcciones = Array.isArray(profile.direcciones) ? profile.direcciones : [];
+  const address = direcciones.find((a) => a?.id === String(body.direccionId || ""));
+  if (!address?.direccion || !address?.ciudad?.codigo) throw httpError(400, "address-not-found");
+
+  const recent = await db.collection("pedidos")
+    .where("uid", "==", uid)
+    .orderBy("creado", "desc")
+    .limit(1)
+    .get();
+  const lastAt = recent.docs[0]?.get("creado")?.toMillis?.() || 0;
+  if (Date.now() - lastAt < ORDER_MIN_INTERVAL_MS) throw httpError(429, "too-many-requests");
+
+  // Precios: catálogo maestro + overrides del subcatálogo (si el pedido viene de ?cliente=slug).
+  const clienteSlug = normalizeSlug(body.clienteSlug);
+  let overrides = new Map();
+  if (clienteSlug) {
+    const clientRef = db.collection("catalogo_clientes").doc(clienteSlug);
+    const clientSnap = await clientRef.get();
+    if (!clientSnap.exists || clientSnap.get("activo") === false) throw httpError(404, "catalog-unavailable");
+    const priceSnap = await clientRef.collection("precios").get();
+    overrides = new Map(priceSnap.docs.map((d) => [String(d.get("sku") || d.id), d.data()]));
+  }
+  const productRefs = items.map((it) => db.collection("catalogo_productos").doc(it.sku.replace(/\//g, "_")));
+  const [productSnaps, pricingSnap] = await Promise.all([
+    db.getAll(...productRefs),
+    db.collection("catalogo_config").doc("pricing").get(),
+  ]);
+
+  const unavailable = [];
+  const lines = items.map((it, i) => {
+    const snap = productSnaps[i];
+    if (!snap.exists) { unavailable.push(it.sku); return null; }
+    const product = { ...snap.data() };
+    const sku = String(product.sku || it.sku);
+    const override = overrides.get(sku);
+    if (override?.visible === false) { unavailable.push(sku); return null; }
+    if (Number(override?.precioBase) > 0) product.precioBase = Number(override.precioBase);
+    if (Array.isArray(override?.escalasUnidades)) product.escalasUnidades = override.escalasUnidades;
+    const unit = precioUnitario(product, it.qty);
+    if (!(unit > 0)) { unavailable.push(sku); return null; }
+    return {
+      sku,
+      nombre: cleanText(product.nombre) || sku,
+      imagen: rewriteImageUrl(cleanText(product.imagen)),
+      cantidad: it.qty,
+      precioUnit: unit,
+      subtotal: unit * it.qty,
+      qty: it.qty,
+      total: unit * it.qty,
+    };
+  });
+  if (unavailable.length) throw httpError(409, "product-unavailable", true, { skus: unavailable });
+
+  // Stock: si Neon no responde, el pedido sigue (Nexus revisa al confirmar).
+  try {
+    const stock = await getStockForSkus(lines.map((l) => l.sku));
+    const short = lines.filter((l) => typeof stock[l.sku] === "number" && l.cantidad > stock[l.sku]);
+    if (short.length) {
+      throw httpError(409, "insufficient-stock", true, {
+        stock: Object.fromEntries(short.map((l) => [l.sku, stock[l.sku]])),
+      });
+    }
+  } catch (err) {
+    if (err?.message === "insufficient-stock") throw err;
+    console.warn("[createCatalogOrder] stock check skipped", err);
+  }
+
+  const totals = quoteTotals(lines, pricingSnap.exists ? pricingSnap.get("wholesaleRules") : null);
+  const orderRef = db.collection("pedidos").doc();
+  const counterRef = db.collection("catalogo_contadores").doc("pedidos");
+  const pedido = {
+    uid,
+    estado: "pendiente",
+    origen: { canal: "catalogo-web", clienteSlug: clienteSlug || null },
+    cliente: {
+      nombre: cleanText(profile.nombre),
+      tipoDocumento: cleanText(profile.tipoDocumento) || "CC",
+      documento: cleanText(profile.documento),
+      telefono: cleanText(profile.telefono),
+      email: cleanText(decoded.email || profile.email),
+    },
+    envio: {
+      alias: cleanText(address.alias),
+      direccion: cleanText(address.direccion),
+      departamento: { codigo: cleanText(address.departamento?.codigo), nombre: cleanText(address.departamento?.nombre) },
+      ciudad: { codigo: cleanText(address.ciudad?.codigo), nombre: cleanText(address.ciudad?.nombre) },
+      indicaciones: cleanText(address.indicaciones),
+      tipoSugerido: FLEX_CITY_CODES.has(String(address.ciudad?.codigo)) ? "flex" : "transportadora",
+    },
+    lineas: lines.map(({ qty, total, ...line }) => line),
+    totales: {
+      subtotal: totals.subtotal,
+      descuentoPct: totals.discountPct,
+      descuento: totals.discount,
+      total: totals.total,
+    },
+    notas: cleanText(body.notas).slice(0, 300),
+    nexus: { ventaId: null, codigoVTP: null, error: null, intentos: 0 },
+  };
+
+  await db.runTransaction(async (tx) => {
+    const counter = await tx.get(counterRef);
+    const next = (Number(counter.get("ultimo")) || 0) + 1;
+    pedido.numero = `CAT-${String(next).padStart(6, "0")}`;
+    tx.set(counterRef, { ultimo: next }, { merge: true });
+    tx.set(orderRef, {
+      ...pedido,
+      creado: admin.firestore.FieldValue.serverTimestamp(),
+      actualizado: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  const creado = new Date().toISOString();
+  const nexus = await sendOrderToNexus(orderRef, { id: orderRef.id, ...pedido, creado });
+  return { id: orderRef.id, ...pedido, ...nexus, creado };
+}
+
+// Lo que recibe Nexus: el pedido completo, sin uid ni datos internos.
+function nexusOrderPayload(order) {
+  return {
+    evento: "pedido.creado",
+    pedidoId: order.id,
+    numero: order.numero,
+    fecha: order.creado.slice(0, 10),
+    creado: order.creado,
+    metodoVenta: "Catálogo web",
+    origen: order.origen,
+    cliente: order.cliente,
+    envio: order.envio,
+    lineas: order.lineas.map((l) => ({
+      sku: l.sku,
+      nombre: l.nombre,
+      imagen: l.imagen,
+      cantidad: l.cantidad,
+      precioUnit: l.precioUnit,
+      subtotal: l.subtotal,
+    })),
+    totales: order.totales,
+    notas: order.notas,
+  };
+}
+
+const NEXUS_ORDER_STATES = new Set(["borrador", "confirmado", "facturado", "despachado", "cancelado"]);
+
+// Webhook de borradores de Nexus. Se envía si hay token (MARKET_DRAFT_WEBHOOK_TOKEN)
+// en `Authorization: Bearer <token>` y `X-Webhook-Token`. NEXUS_ORDER_WEBHOOK_URL
+// (functions/.env) permite apuntar a otra URL. Nexus debe ignorar un pedidoId
+// repetido. Devuelve los campos actualizados del pedido ({ estado, nexus }).
+async function sendOrderToNexus(orderRef, order) {
+  const token = marketDraftWebhookToken.value();
+  if (!token) return {};
+  const url = process.env.NEXUS_ORDER_WEBHOOK_URL || NEXUS_DRAFT_WEBHOOK_URL;
+
+  const body = JSON.stringify(nexusOrderPayload(order));
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+    "X-Webhook-Token": token,
+    "X-Pedido-Id": order.id,
+  };
+
+  let update;
+  try {
+    const res = await fetch(url, { method: "POST", headers, body, signal: AbortSignal.timeout(10000) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const detail = data?.message || data?.error || data?.code;
+      throw new Error(`HTTP ${res.status}${detail ? `: ${detail}` : ""}`);
+    }
+    const estado = cleanText(data.estado).toLowerCase();
+    update = {
+      estado: NEXUS_ORDER_STATES.has(estado) ? estado : "borrador",
+      nexus: {
+        ventaId: cleanText(data.ventaId || data.id || data.borradorId) || null,
+        codigoVTP: cleanText(data.codigoVTP) || null,
+        error: null,
+        intentos: (order.nexus?.intentos || 0) + 1,
+      },
+    };
+  } catch (err) {
+    console.error("[sendOrderToNexus]", order.numero, err);
+    update = {
+      estado: "error_envio",
+      nexus: { ...order.nexus, error: String(err?.message || err).slice(0, 300), intentos: (order.nexus?.intentos || 0) + 1 },
+    };
+  }
+  await orderRef.update({ ...update, actualizado: admin.firestore.FieldValue.serverTimestamp() });
+  return update;
+}
+
+function requestOrderItems(raw) {
+  if (!Array.isArray(raw)) return [];
+  const bySku = new Map();
+  for (const item of raw) {
+    const sku = cleanText(item?.sku);
+    const qty = Math.floor(Number(item?.qty));
+    if (!sku || !Number.isFinite(qty) || qty < 1) continue;
+    if (qty > ORDER_MAX_QTY) throw httpError(400, "invalid-quantity");
+    const key = sku.toLowerCase();
+    if (bySku.has(key)) bySku.get(key).qty += qty;
+    else bySku.set(key, { sku, qty });
+    if (bySku.size > ORDER_MAX_LINES) throw httpError(400, "too-many-lines");
+  }
+  return [...bySku.values()];
+}
+
+async function requireUser(req) {
+  const header = req.get("authorization") || "";
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  if (!match) throw httpError(401, "unauthorized");
+  try {
+    return await admin.auth().verifyIdToken(match[1]);
+  } catch {
+    throw httpError(401, "unauthorized");
+  }
+}
 
 function setCors(req, res) {
   const origin = req.get("origin");

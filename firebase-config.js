@@ -1,13 +1,17 @@
+
 // Config web de Firebase (es PÚBLICA y segura de exponer: la protección real
 // la dan las Security Rules de Firestore, no estas claves). Misma app que el
 // dashboard, proyecto ventasdashboard-e48b2.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
   getFirestore, collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
+  where, limit, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, getIdTokenResult,
   setPersistence, browserLocalPersistence,
+  GoogleAuthProvider, signInWithPopup, signInWithRedirect, createUserWithEmailAndPassword,
+  sendPasswordResetEmail, updateProfile,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import {
   getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL,
@@ -29,6 +33,8 @@ export const storage = getStorage(app);
 
 export const COLLECTION = "catalogo_productos";
 export const CLIENTS_COLLECTION = "catalogo_clientes";
+export const BUYERS_COLLECTION = "compradores";
+export const ORDERS_COLLECTION = "pedidos";
 export const NEON_IMPORT_ENDPOINT =
   "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/importCatalogProductFromSku";
 export const CATALOG_STOCK_ENDPOINT =
@@ -39,10 +45,17 @@ export const CLIENT_USER_ENDPOINT =
   "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/upsertCatalogClientUser";
 export const AI_DRAFT_ENDPOINT =
   "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/generateCatalogProductDraft";
+// En localhost el pedido va al emulador de Functions (firebase emulators:start --only functions).
+export const CATALOG_ORDER_ENDPOINT = location.hostname === "localhost"
+  ? "http://127.0.0.1:5001/ventasdashboard-e48b2/us-central1/createCatalogOrder"
+  : "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/createCatalogOrder";
 
 export {
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
+  where, limit, serverTimestamp,
   signInWithEmailAndPassword, signOut, onAuthStateChanged, getIdTokenResult,
   setPersistence, browserLocalPersistence,
+  GoogleAuthProvider, signInWithPopup, signInWithRedirect, createUserWithEmailAndPassword,
+  sendPasswordResetEmail, updateProfile,
   storageRef, uploadBytesResumable, getDownloadURL,
 };

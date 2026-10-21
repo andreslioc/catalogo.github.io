@@ -1,6 +1,8 @@
 # Variables de entorno (credenciales, API keys)
 .env
 .env.*
+# Secretos de Functions para el emulador local (MARKET_DRAFT_WEBHOOK_TOKEN, ...)
+functions/.secret.local
 
 # Dependencias del build del PDF (se instalan con: cd _build && npm install)
 _build/node_modules/

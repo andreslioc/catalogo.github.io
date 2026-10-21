@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>Mi cuenta · Catálogo</title>
+  <link rel="stylesheet" href="styles.css?v=20261020-1" />
+  <link rel="stylesheet" href="account.css?v=20261020-1" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body class="acct-page">
+  <header class="acct-header">
+    <div class="acct-header-inner">
+      <a class="acct-back" href="index.html">← Volver al catálogo</a>
+      <h1>Mi cuenta</h1>
+      <button id="acct-logout" class="acct-logout" type="button" hidden>Cerrar sesión</button>
+    </div>
+  </header>
+
+  <main class="acct-main">
+    <p id="acct-loading" class="acct-loading">Cargando…</p>
+
+    <section id="acct-guest" class="acct-card acct-guest" hidden>
+      <h2>Ingresa a tu cuenta</h2>
+      <p>Con tu cuenta guardas tus datos y hasta 5 direcciones de envío, y puedes ver el historial de tus pedidos.</p>
+      <div class="acct-guest-actions">
+        <button id="acct-login" class="acc-primary" type="button">Iniciar sesión</button>
+        <button id="acct-signup" class="btn-ghost-brand" type="button">Crear cuenta</button>
+      </div>
+    </section>
+
+    <div id="acct-content" class="acct-grid" hidden>
+      <section class="acct-card" aria-labelledby="acct-datos-title">
+        <div class="acct-card-head">
+          <h2 id="acct-datos-title">Mis datos</h2>
+          <button id="acct-edit-profile" class="btn-link" type="button">Editar</button>
+        </div>
+        <dl id="acct-profile" class="acct-profile"></dl>
+      </section>
+
+      <section class="acct-card" aria-labelledby="acct-dir-title">
+        <div class="acct-card-head">
+          <h2 id="acct-dir-title">Mis direcciones</h2>
+          <span id="acct-dir-count" class="acc-muted"></span>
+        </div>
+        <div id="acct-addresses"></div>
+      </section>
+
+      <section id="pedidos" class="acct-card acct-orders-card" aria-labelledby="acct-ped-title">
+        <div class="acct-card-head">
+          <h2 id="acct-ped-title">Mis pedidos</h2>
+        </div>
+        <div id="acct-orders" class="acct-orders"></div>
+      </section>
+    </div>
+  </main>
+
+  <script type="module" src="cuenta.js?v=20261020-1"></script>
+</body>
+</html>

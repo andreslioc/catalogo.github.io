@@ -6,7 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-store" />
   <meta http-equiv="Pragma" content="no-cache" />
   <title>Catálogo de Productos</title>
-  <link rel="stylesheet" href="styles.css?v=20260702-1" />
+  <link rel="stylesheet" href="styles.css?v=20261020-1" />
+  <link rel="stylesheet" href="account.css?v=20261020-1" />
   <!-- jsPDF (UMD) para descargar la cotización en PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -17,7 +18,10 @@
       <span></span>
       <span></span>
     </button>
-    <a class="client-access" href="cliente.html">Clientes</a>
+    <nav class="header-links">
+      <a class="client-access" href="cuenta.html">Mi cuenta</a>
+      <a class="client-access" href="cliente.html">Distribuidores</a>
+    </nav>
     <div class="header-inner">
       <h1>Catálogo de Productos</h1>
       <p class="subtitle">Suplementos · Salud · Belleza · Bebés · Alimentos</p>
@@ -102,12 +106,25 @@
         <h2>Tu cotización</h2>
         <button class="cart-x" data-cart-close aria-label="Cerrar">&times;</button>
       </div>
-      <div class="cart-customer">
-        <input id="cart-nombre" type="text" placeholder="Nombre del cliente (opcional)" autocomplete="name" />
+      <div id="cart-body" class="cart-body">
+        <div id="cart-guest-name" class="cart-customer">
+          <input type="text" placeholder="Nombre del cliente (opcional, para el PDF)" autocomplete="name" />
+        </div>
+        <div id="cart-items" class="cart-items"></div>
+        <p id="cart-empty" class="cart-empty">Aún no agregas productos. Abre un producto y pulsa “Agregar a cotización”.</p>
+        <section id="cart-checkout" class="cart-checkout" hidden>
+          <div id="cart-account" class="cart-account"></div>
+          <div id="cart-shipping" class="cart-shipping" hidden>
+            <h3>Enviar a</h3>
+            <div id="cart-addresses"></div>
+            <label class="cart-notes">
+              <span>Notas para tu pedido <em>(opcional)</em></span>
+              <textarea id="cart-notas" rows="2" maxlength="300" placeholder="Horario de entrega, referencia, etc."></textarea>
+            </label>
+          </div>
+        </section>
       </div>
-      <div id="cart-items" class="cart-items"></div>
-      <p id="cart-empty" class="cart-empty">Aún no agregas productos. Abre un producto y pulsa “Agregar a cotización”.</p>
-      <div class="cart-foot">
+      <div id="cart-foot" class="cart-foot">
         <div class="cart-breakdown">
           <div><span>Subtotal</span><strong id="cart-subtotal">$0</strong></div>
           <div id="cart-discount-row"><span id="cart-discount-label">Descuento</span><strong id="cart-discount">$0</strong></div>
@@ -119,9 +136,11 @@
         <p class="cart-note">Producto sujeto a disponibilidad. El transporte corre por cuenta del comprador. Cotización referencial, no es factura.</p>
         <div class="cart-foot-actions">
           <button id="cart-clear" class="btn-clear">Vaciar</button>
-          <button id="cart-pdf" class="btn-pdf">Descargar PDF</button>
+          <button id="cart-pdf" class="btn-ghost-brand">Descargar PDF</button>
         </div>
+        <button id="cart-finish" class="btn-finish" type="button">Finalizar cotización</button>
       </div>
+      <section id="cart-success" class="cart-success" aria-live="polite" hidden></section>
     </div>
   </aside>
 
@@ -147,6 +166,6 @@
     <p>Catálogo · <span id="footer-count"></span> productos</p>
   </footer>
 
-  <script type="module" src="app.js?v=20261019-2"></script>
+  <script type="module" src="app.js?v=20261020-1"></script>
 </body>
 </html>

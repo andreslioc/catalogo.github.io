@@ -337,3 +337,94 @@ Las reglas incluidas permiten:
 - Lectura publica de clientes activos y sus precios.
 - Escritura de precios solo por admin o por el cliente dueño.
 - Gestion de clientes solo por admin.
+
+## Cuentas de comprador y pedidos
+
+Para **finalizar una cotización** el comprador necesita cuenta. Puede armar la
+cotización y descargar el PDF sin cuenta, pero registrar el pedido pide sesión.
+Flujo:
+
+1. En el carrito pulsa **Finalizar cotización**.
+2. Sin sesión: inicia sesión o crea cuenta (Google o correo/contraseña).
+3. Primera vez: completa sus datos (nombre, tipo y número de documento,
+   teléfono y autorización de tratamiento de datos, Ley 1581). Se piden una sola vez.
+4. Elige la dirección de envío: puede tener **máximo 5**, con Editar / Borrar,
+   una predeterminada y **+ Agregar nueva dirección**.
+5. Al confirmar, la Function `createCatalogOrder` guarda el pedido y avisa a Nexus.
+6. En **Mi cuenta** (`cuenta.html`) ve sus datos, direcciones y el historial de
+   pedidos, y puede volver a descargar cada orden en PDF.
+
+### Datos
+
+```txt
+compradores/{uid}        perfil + direcciones[] (máx. 5, lo valida la regla)
+pedidos/{id}             pedido con copia fija del cliente y la dirección
+catalogo_contadores/pedidos   consecutivo de CAT-000001, CAT-000002, ...
+```
+
+Las direcciones guardan departamento y ciudad con **código DANE + nombre**
+(`colombia.json`, generado desde la DIVIPOLA con `python3 _build/build_colombia.py`).
+Nexus debe emparejar por código: los nombres pueden variar en tildes o puntos.
+
+El navegador **nunca escribe pedidos**. `createCatalogOrder` recibe solo SKU,
+cantidad e id de dirección. Recalcula precio (maestro o del subcatálogo
+`?cliente=slug`), escalas, descuento mayorista y stock con datos del servidor
+(`functions/pricing.js` es copia de `pricing.js`: si cambias uno, cambia el otro).
+Limita a un pedido cada 20 s por usuario.
+
+Estados del pedido: `pendiente` (guardado, aún no llega a Nexus), `error_envio`
+(Nexus no respondió), `borrador` (Nexus lo recibió), `confirmado`, `facturado`,
+`despachado`, `cancelado`. Nexus actualiza el campo `estado` del pedido
+(mismo proyecto Firebase) y el cliente lo ve en "Mis pedidos".
+
+### Webhook hacia Nexus
+
+Se activa definiendo en `functions/.env`:
+
+```env
+NEXUS_ORDER_WEBHOOK_URL=https://...
+NEXUS_ORDER_WEBHOOK_SECRET=...   # opcional: firma HMAC-SHA256 del cuerpo
+```
+
+Sin URL, los pedidos quedan en `pendiente`. Cada pedido se envía por `POST` con
+cabeceras `X-Pedido-Id` y `X-Signature: sha256=<hex>`. El cuerpo es:
+
+```json
+{
+  "evento": "pedido.creado",
+  "pedidoId": "abc123",
+  "numero": "CAT-000123",
+  "fecha": "2026-10-20",
+  "metodoVenta": "Catálogo web",
+  "origen": { "canal": "catalogo-web", "clienteSlug": null },
+  "cliente": { "nombre": "", "tipoDocumento": "CC", "documento": "", "telefono": "", "email": "" },
+  "envio": {
+    "direccion": "", "indicaciones": "",
+    "departamento": { "codigo": "25", "nombre": "Cundinamarca" },
+    "ciudad": { "codigo": "25754", "nombre": "Soacha" },
+    "tipoSugerido": "flex"
+  },
+  "lineas": [{ "sku": "SalCar-301", "nombre": "", "cantidad": 3, "precioUnit": 89900 }],
+  "totales": { "subtotal": 269700, "descuentoPct": 0, "descuento": 0, "total": 269700 },
+  "notas": ""
+}
+```
+
+`tipoSugerido` es `flex` para Bogotá D.C. (11001) y Soacha (25754), y
+`transportadora` para el resto. Nexus debe:
+
+- ignorar un `pedidoId` que ya recibió (para que reintentar no duplique la venta);
+- responder `{ "ventaId": "...", "codigoVTP": "...", "estado": "borrador" }`,
+  que se guarda en el pedido.
+
+### Activar
+
+1. Firebase Console → Authentication → Sign-in method: habilitar **Google** y
+   **Correo/contraseña**. En *Authorized domains* agregar el dominio del catálogo.
+2. Desplegar reglas e índice (el historial y el límite por usuario necesitan el
+   índice `pedidos: uid ASC, creado DESC`; crearlo **antes** de la Function):
+
+```powershell
+firebase deploy --only firestore:rules,firestore:indexes
+firebase deploy --only functions:createCatalogOrder
+```

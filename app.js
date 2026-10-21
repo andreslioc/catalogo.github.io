@@ -2,8 +2,13 @@ import {
   db, auth, COLLECTION, CLIENTS_COLLECTION, CATALOG_STOCK_ENDPOINT,
   collection, getDocs, getDoc, doc, query, orderBy,
   signInWithEmailAndPassword, getIdTokenResult, signOut, setPersistence, browserLocalPersistence,
-} from "./firebase-config.js?v=20260702-2";
+} from "./firebase-config.js?v=20261020-1";
 import { DEFAULT_WHOLESALE_RULES, precioUnitario, tienePrecio, money, normalizeWholesaleRules, quoteTotals } from "./pricing.js";
+import {
+  onUser, logout, loadProfile, isProfileComplete, defaultAddressId, renderAddressList,
+  openAuthDialog, openProfileDialog, openAddressDialog, createOrder, orderErrorMessage, orderDate,
+} from "./account.js?v=20261020-1";
+import { downloadQuotePdf } from "./quote-pdf.js?v=20261020-1";
 
 const CART_KEY = "catalogo_cart_v1";
 const CONFIG_COLLECTION = "catalogo_config";
@@ -28,6 +33,10 @@ const state = {
   cart: {},             // { [sku]: cantidad }
   stock: {},            // { [sku]: unidades disponibles } (Neon, vía Cloud Function)
   currentStock: null,   // stock del producto abierto en el modal (null = desconocido)
+  user: null,           // comprador con sesión (Firebase Auth)
+  profile: null,        // compradores/{uid}
+  selectedAddressId: "",
+  lastOrder: null,      // pedido recién creado (pantalla de confirmación)
 };
 
 // Umbral para avisar "últimas unidades" en badges.
@@ -52,6 +61,16 @@ const els = {
   cartDiscountLabel: document.getElementById("cart-discount-label"),
   cartDiscount: document.getElementById("cart-discount"),
   cartTotal: document.getElementById("cart-total"),
+  cartBody: document.getElementById("cart-body"),
+  cartFoot: document.getElementById("cart-foot"),
+  cartGuestName: document.getElementById("cart-guest-name"),
+  checkout: document.getElementById("cart-checkout"),
+  cartAccount: document.getElementById("cart-account"),
+  cartShipping: document.getElementById("cart-shipping"),
+  cartAddresses: document.getElementById("cart-addresses"),
+  cartNotas: document.getElementById("cart-notas"),
+  cartFinish: document.getElementById("cart-finish"),
+  cartSuccess: document.getElementById("cart-success"),
   infoBook: document.getElementById("m-info-book"),
   turnSheet: document.getElementById("m-turn-sheet"),
   adminMenu: document.getElementById("admin-menu"),
@@ -96,6 +115,7 @@ async function init() {
   applyFilters();
   els.footerCount.textContent = state.all.length;
   renderCart();
+  watchBuyerSession();
   loadStock(); // no bloquea el primer render; repinta cuando llega
 }
 
@@ -360,6 +380,21 @@ function bindEvents() {
   });
   document.getElementById("cart-clear").addEventListener("click", clearCart);
   document.getElementById("cart-pdf").addEventListener("click", downloadPDF);
+  els.cartFinish.addEventListener("click", finishQuote);
+  els.cartAccount.addEventListener("click", (e) => {
+    if (e.target.closest("[data-cart-login]")) {
+      promptLogin("Inicia sesión o crea tu cuenta para finalizar tu pedido.");
+    } else if (e.target.closest("[data-cart-profile]")) {
+      editProfileFromCart();
+    } else if (e.target.closest("[data-cart-logout]")) {
+      logout();
+    }
+  });
+  els.cartSuccess.addEventListener("click", (e) => {
+    const pdfBtn = e.target.closest("[data-success-pdf]");
+    if (pdfBtn) downloadOrderPDF(pdfBtn);
+    else if (e.target.closest("[data-success-close]")) { hideOrderSuccess(); closeCart(); }
+  });
 
   els.adminMenu.addEventListener("click", openAdminLogin);
   els.adminLogin.addEventListener("click", (e) => {
@@ -368,17 +403,22 @@ function bindEvents() {
   els.adminForm.addEventListener("submit", handleAdminLogin);
 }
 
-function openAdminLogin() {
-  if (auth.currentUser) {
-    enterAdminWithUser(auth.currentUser).catch(() => {
-      signOut(auth).finally(() => {
-        els.adminError.textContent = "No se pudo confirmar la sesión. Vuelve a ingresar.";
-        els.adminError.hidden = false;
-        els.adminLogin.hidden = false;
-        document.body.style.overflow = "hidden";
+async function openAdminLogin() {
+  // Una sesión de comprador no es admin: se muestra el formulario sin cerrarla.
+  const current = auth.currentUser;
+  if (current) {
+    const token = await getIdTokenResult(current).catch(() => null);
+    if (token?.claims.admin === true) {
+      enterAdminWithUser(current).catch(() => {
+        signOut(auth).finally(() => {
+          els.adminError.textContent = "No se pudo confirmar la sesión. Vuelve a ingresar.";
+          els.adminError.hidden = false;
+          els.adminLogin.hidden = false;
+          document.body.style.overflow = "hidden";
+        });
       });
-    });
-    return;
+      return;
+    }
   }
   els.adminError.hidden = true;
   els.adminError.textContent = "";
@@ -1023,6 +1063,7 @@ function renderCart() {
     : "Descuento";
   els.cartDiscount.textContent = "-" + money(totals.discount);
   els.cartTotal.textContent = money(totals.total);
+  renderCheckout();
 }
 
 function bumpQty(sku, delta) {
@@ -1043,137 +1084,290 @@ function clearCart() {
   renderCart();
 }
 
-function openCart() { els.cart.hidden = false; document.body.style.overflow = "hidden"; }
-function closeCart() { els.cart.hidden = true; document.body.style.overflow = ""; }
+function openCart() {
+  if (state.lastOrder && Object.keys(state.cart).length) hideOrderSuccess();
+  els.cart.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+function closeCart() {
+  if (els.cart.hidden) return;
+  els.cart.hidden = true;
+  document.body.style.overflow = "";
+  if (state.lastOrder) hideOrderSuccess();
+}
 
-/* ---------------- PDF ---------------- */
-// Miniatura JPEG (dataURL) de la portada para incrustar en el PDF, o null si
-// no se pudo leer. Requiere que el host de la imagen envíe CORS (bucket R2).
-// cache:"no-store" evita reutilizar la copia sin CORS que dejó el <img> del catálogo.
-async function pdfThumb(url, px = 120) {
-  if (!url) return null;
-  try {
-    const res = await fetch(url, { mode: "cors", cache: "no-store" });
-    if (!res.ok) return null;
-    const bmp = await createImageBitmap(await res.blob());
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = px;
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, px, px);
-    const s = Math.min(px / bmp.width, px / bmp.height);
-    const w = bmp.width * s, h = bmp.height * s;
-    ctx.drawImage(bmp, (px - w) / 2, (px - h) / 2, w, h);
-    return canvas.toDataURL("image/jpeg", 0.8);
-  } catch {
-    return null;
+/* ---------------- CUENTA + FINALIZAR COTIZACIÓN ---------------- */
+// La cotización se arma sin cuenta; para finalizarla (registrar el pedido) se
+// exige sesión, perfil completo y una dirección de envío.
+
+let profileLoad = null;
+function ensureProfile() {
+  const user = state.user;
+  if (!user) return Promise.resolve(null);
+  if (state.profile) return Promise.resolve(state.profile);
+  if (!profileLoad) {
+    profileLoad = loadProfile(user)
+      .then((p) => {
+        if (state.user?.uid === user.uid) state.profile = p;
+        return p;
+      })
+      .finally(() => { profileLoad = null; });
+  }
+  return profileLoad;
+}
+
+function watchBuyerSession() {
+  onUser((user) => {
+    if (user?.uid === state.user?.uid) return;
+    state.user = user || null;
+    state.profile = null;
+    state.selectedAddressId = "";
+    renderCheckout();
+    if (user) {
+      ensureProfile().then(renderCheckout).catch((err) => {
+        console.warn("[profile]", err);
+        renderCheckout();
+      });
+    }
+  });
+}
+
+function renderCheckout() {
+  const hasLines = Object.keys(state.cart).length > 0;
+  els.cartGuestName.hidden = !!state.user;
+  els.checkout.hidden = !hasLines;
+  if (!hasLines) return;
+
+  if (!state.user) {
+    els.cartAccount.innerHTML = `
+      <div class="cart-guest">
+        <p>Para finalizar tu pedido inicia sesión o crea una cuenta. Guardamos tus datos y direcciones para la próxima vez.</p>
+        <button type="button" class="btn-link" data-cart-login>Iniciar sesión / Crear cuenta</button>
+      </div>`;
+    els.cartShipping.hidden = true;
+    return;
+  }
+
+  const p = state.profile;
+  if (!p) {
+    els.cartAccount.innerHTML = '<p class="cart-muted">Cargando tu cuenta…</p>';
+    els.cartShipping.hidden = true;
+    return;
+  }
+
+  const complete = isProfileComplete(p);
+  els.cartAccount.innerHTML = `
+    <div class="cart-who">
+      <div class="cart-who-text">
+        <strong>${escapeHtml(p.nombre || state.user.email || "Tu cuenta")}</strong>
+        <span>${complete
+          ? escapeHtml(`${p.tipoDocumento} ${p.documento} · ${p.telefono}`)
+          : "Faltan tus datos (documento y teléfono)"}</span>
+      </div>
+      <div class="cart-who-actions">
+        <button type="button" class="btn-link" data-cart-profile>${complete ? "Editar" : "Completar"}</button>
+        <button type="button" class="btn-link btn-link-soft" data-cart-logout>Salir</button>
+      </div>
+    </div>`;
+
+  els.cartShipping.hidden = false;
+  if (!p.direcciones.some((a) => a.id === state.selectedAddressId)) {
+    state.selectedAddressId = defaultAddressId(p);
+  }
+  renderAddressList(els.cartAddresses, state.user, p, {
+    selectable: true,
+    selectedId: state.selectedAddressId,
+    onSelect: (id) => {
+      state.selectedAddressId = id;
+      els.cartAddresses.querySelectorAll(".acc-addr").forEach((card) =>
+        card.classList.toggle("is-selected", card.dataset.id === id));
+    },
+    onChange: (profile, id) => {
+      state.profile = profile;
+      if (id) state.selectedAddressId = id;
+      renderCheckout();
+    },
+  });
+}
+
+async function promptLogin(reason) {
+  const user = await openAuthDialog({ reason });
+  if (!user) return false;
+  // onAuthStateChanged puede llegar un instante después del login.
+  if (state.user?.uid !== user.uid) {
+    state.user = user;
+    state.profile = null;
+    state.selectedAddressId = "";
+  }
+  renderCheckout();
+  await ensureProfile();
+  renderCheckout();
+  return true;
+}
+
+async function editProfileFromCart() {
+  const profile = await ensureProfile();
+  if (!profile) return;
+  const saved = await openProfileDialog(state.user, profile);
+  if (saved) {
+    state.profile = saved;
+    renderCheckout();
   }
 }
 
-async function downloadPDF() {
+async function finishQuote() {
+  const lines = cartLines();
+  if (!lines.length) return;
+  if (lines.some((l) => l.excede)) {
+    toast("Ajusta las cantidades marcadas: superan las unidades disponibles.", true);
+    return;
+  }
+
+  if (!state.user) {
+    const ok = await promptLogin("Para finalizar tu cotización inicia sesión o crea tu cuenta. Así guardamos tus datos para la próxima vez.");
+    if (!ok) return;
+  }
+
+  let profile;
+  try {
+    profile = await ensureProfile();
+  } catch (err) {
+    console.warn("[profile]", err);
+    toast("No se pudo cargar tu cuenta. Intenta de nuevo.", true);
+    return;
+  }
+  if (!isProfileComplete(profile)) {
+    profile = await openProfileDialog(state.user, profile, {
+      reason: "Antes de enviar tu pedido completa tus datos. Solo te los pedimos una vez.",
+    });
+    if (!profile) return;
+    state.profile = profile;
+    renderCheckout();
+  }
+
+  if (!profile.direcciones.length) {
+    const res = await openAddressDialog(state.user, profile, null);
+    if (!res) return;
+    state.profile = profile = res.profile;
+    state.selectedAddressId = res.id;
+    renderCheckout();
+  }
+
+  const direccionId = state.selectedAddressId;
+  if (!profile.direcciones.some((a) => a.id === direccionId)) {
+    toast("Selecciona la dirección de envío.", true);
+    els.cartShipping.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  const btn = els.cartFinish;
+  const btnText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Enviando pedido…";
+  try {
+    const pedido = await createOrder(state.user, {
+      items: lines.map((l) => ({ sku: l.p.sku, qty: l.qty })),
+      clienteSlug: state.clientSlug || null,
+      direccionId,
+      notas: els.cartNotas.value.trim().slice(0, 300),
+    });
+    state.lastOrder = pedido;
+    state.cart = {};
+    saveCart();
+    els.cartNotas.value = "";
+    renderCart();
+    showOrderSuccess();
+  } catch (err) {
+    console.warn("[order]", err);
+    if (err.message === "insufficient-stock" && err.details?.stock) {
+      Object.assign(state.stock, err.details.stock);
+      renderCart();
+      render();
+    }
+    if (err.message === "profile-incomplete") state.profile = null;
+    toast(orderErrorMessage(err), true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = btnText;
+  }
+}
+
+function showOrderSuccess() {
+  const o = state.lastOrder;
+  if (!o) return;
+  els.cartSuccess.innerHTML = `
+    <div class="cart-success-icon" aria-hidden="true">✓</div>
+    <h3>¡Pedido registrado!</h3>
+    <p class="cart-success-num">${escapeHtml(o.numero)}</p>
+    <p>Total ${money(o.totales?.total)}. Te contactaremos para confirmar disponibilidad, envío y pago.</p>
+    <p class="cart-muted">Lo encuentras en <strong>Mi cuenta → Mis pedidos</strong>.</p>
+    <div class="cart-success-actions">
+      <button type="button" class="btn-pdf" data-success-pdf>Descargar orden (PDF)</button>
+      <a class="btn-clear" href="cuenta.html#pedidos">Ver mis pedidos</a>
+      <button type="button" class="btn-link" data-success-close>Seguir comprando</button>
+    </div>`;
+  els.cartSuccess.hidden = false;
+  els.cartBody.hidden = true;
+  els.cartFoot.hidden = true;
+}
+
+function hideOrderSuccess() {
+  state.lastOrder = null;
+  els.cartSuccess.hidden = true;
+  els.cartSuccess.innerHTML = "";
+  els.cartBody.hidden = false;
+  els.cartFoot.hidden = false;
+}
+
+async function withPdfButton(btn, fn) {
+  if (!window.jspdf?.jsPDF) { alert("No se pudo cargar el generador de PDF. Revisa tu conexión."); return; }
+  const text = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Generando…";
+  try {
+    await fn();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = text;
+  }
+}
+
+function downloadOrderPDF(btn) {
+  const o = state.lastOrder;
+  if (!o) return;
+  withPdfButton(btn, () => downloadQuotePdf({ ...o, fecha: orderDate(o) }));
+}
+
+/* ---------------- PDF ---------------- */
+function downloadPDF() {
   const lines = cartLines();
   if (!lines.length) { alert("Agrega productos antes de descargar la cotización."); return; }
 
-  const { jsPDF } = window.jspdf || {};
-  if (!jsPDF) { alert("No se pudo cargar el generador de PDF. Revisa tu conexión."); return; }
-
-  const btn = document.getElementById("cart-pdf");
-  const btnText = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Generando…";
-  const thumbs = await Promise.all(lines.map((l) => pdfThumb(productImages(l.p)[0])));
-  btn.disabled = false;
-  btn.textContent = btnText;
-
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const W = doc.internal.pageSize.getWidth();
-  const M = 40;
-  let y = M;
-
-  // Encabezado
-  doc.setFillColor(14, 116, 144);
-  doc.rect(0, 0, W, 70, "F");
-  doc.setTextColor(255).setFont("helvetica", "bold").setFontSize(20);
-  doc.text("Cotización", M, 44);
-  doc.setFont("helvetica", "normal").setFontSize(10).setTextColor(220, 243, 249);
-  const hoy = new Date().toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
-  doc.text(hoy, W - M, 44, { align: "right" });
-  y = 95;
-
-  // Cliente
-  const nombre = (document.getElementById("cart-nombre").value || "").trim();
-  doc.setTextColor(31, 41, 55).setFontSize(11);
-  if (nombre) { doc.setFont("helvetica", "bold").text(`Cliente: ${nombre}`, M, y); y += 20; }
-
-  // Cabecera tabla
-  const colX = { prod: M, cant: 320, unit: 390, tot: W - M };
-  doc.setFont("helvetica", "bold").setFontSize(10).setTextColor(107, 114, 128);
-  doc.text("Producto", colX.prod, y);
-  doc.text("Cant.", colX.cant, y, { align: "right" });
-  doc.text("P. unit.", colX.unit, y, { align: "right" });
-  doc.text("Subtotal", colX.tot, y, { align: "right" });
-  y += 6;
-  doc.setDrawColor(229, 231, 235).line(M, y, W - M, y);
-  y += 16;
-
-  // Filas
-  doc.setFont("helvetica", "normal").setTextColor(31, 41, 55).setFontSize(10);
-  let total = 0;
-  const THUMB = 36;
-  const textX = colX.prod + THUMB + 10;
-  lines.forEach((l, i) => {
-    doc.setFont("helvetica", "normal").setFontSize(10).setTextColor(31, 41, 55);
-    const name = doc.splitTextToSize(l.p.nombre || l.p.sku, colX.cant - textX - 16);
-    const rowH = Math.max(THUMB, name.length * 12 + 12);
-    if (y + rowH > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); y = M + 10; }
-
-    const top = y - 10;
-    if (thumbs[i]) {
-      doc.addImage(thumbs[i], "JPEG", colX.prod, top, THUMB, THUMB);
-    } else {
-      doc.setDrawColor(229, 231, 235).rect(colX.prod, top, THUMB, THUMB);
-    }
-
-    doc.text(name, textX, y);
-    doc.text(String(l.qty), colX.cant, y, { align: "right" });
-    doc.text(money(l.unit), colX.unit, y, { align: "right" });
-    doc.text(money(l.total), colX.tot, y, { align: "right" });
-    doc.setFontSize(8).setTextColor(107, 114, 128);
-    doc.text(`SKU: ${l.p.sku}`, textX, y + name.length * 12);
-    total += l.total;
-    y += rowH + 10;
-  });
   const totals = quoteTotals(lines, state.wholesaleRules);
+  const p = state.user ? state.profile : null;
+  const cliente = p
+    ? { nombre: p.nombre, tipoDocumento: p.tipoDocumento, documento: p.documento, telefono: p.telefono }
+    : { nombre: (els.cartGuestName.querySelector("input").value || "").trim() };
+  const envio = p?.direcciones.find((a) => a.id === state.selectedAddressId) || null;
 
-  // Total
-  y += 4;
-  doc.setDrawColor(229, 231, 235).line(M, y, W - M, y);
-  y += 22;
-  doc.setFont("helvetica", "bold").setFontSize(13).setTextColor(31, 41, 55);
-  doc.text("Subtotal", colX.unit, y, { align: "right" });
-  doc.text(money(total), colX.tot, y, { align: "right" });
-  if (totals.discount > 0) {
-    y += 18;
-    doc.setFont("helvetica", "bold").setFontSize(11).setTextColor(22, 101, 52);
-    doc.text(`Descuento mayorista ${totals.discountPct}%`, colX.unit, y, { align: "right" });
-    doc.text("-" + money(totals.discount), colX.tot, y, { align: "right" });
-  }
-  y += 22;
-  doc.setFont("helvetica", "bold").setFontSize(13).setTextColor(31, 41, 55);
-  doc.text("Total estimado", colX.unit, y, { align: "right" });
-  doc.setTextColor(14, 116, 144);
-  doc.text(money(totals.total), colX.tot, y, { align: "right" });
-
-  // Nota
-  y += 26;
-  doc.setFont("helvetica", "italic").setFontSize(8).setTextColor(107, 114, 128);
-  doc.text(
-    "Producto sujeto a disponibilidad de unidades. Precio del transporte corre por cuenta del comprador. Cotizacion referencial, no es factura.",
-    M, y, { maxWidth: W - M * 2 }
-  );
-
-  const fecha = new Date().toISOString().slice(0, 10);
-  doc.save(`cotizacion-${fecha}.pdf`);
+  withPdfButton(document.getElementById("cart-pdf"), () => downloadQuotePdf({
+    cliente,
+    envio,
+    lineas: lines.map((l) => ({
+      sku: l.p.sku,
+      nombre: l.p.nombre || l.p.sku,
+      imagen: productImages(l.p)[0] || "",
+      cantidad: l.qty,
+      precioUnit: l.unit,
+      subtotal: l.total,
+    })),
+    totales: {
+      subtotal: totals.subtotal,
+      descuentoPct: totals.discountPct,
+      descuento: totals.discount,
+      total: totals.total,
+    },
+  }));
 }
 
 /* ---------------- HELPERS ---------------- */
