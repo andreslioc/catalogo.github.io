@@ -45,10 +45,8 @@ export const CLIENT_USER_ENDPOINT =
   "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/upsertCatalogClientUser";
 export const AI_DRAFT_ENDPOINT =
   "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/generateCatalogProductDraft";
-// En localhost el pedido va al emulador de Functions (firebase emulators:start --only functions).
-export const CATALOG_ORDER_ENDPOINT = location.hostname === "localhost"
-  ? "http://127.0.0.1:5001/ventasdashboard-e48b2/us-central1/createCatalogOrder"
-  : "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/createCatalogOrder";
+export const CATALOG_ORDER_ENDPOINT =
+  "https://us-central1-ventasdashboard-e48b2.cloudfunctions.net/createCatalogOrder";
 
 export {
   collection, getDocs, getDoc, doc, setDoc, deleteDoc, query, orderBy,
